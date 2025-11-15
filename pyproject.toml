@@ -1,0 +1,61 @@
+# pyproject.toml
+
+# 1. Build System Configuration
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+# 2. Project Metadata
+[project]
+name = "pyhartig"
+version = "0.1.0"
+description = "A Python implementation of Olaf Hartig's algebra for Knowledge Graph Construction. Developed for the 'Engineering For Research I' course (M1 SMART Computing) at Nantes Université (LS2N - GDD Team)."
+readme = "README.md"
+
+# Authors
+authors = [
+    { name = "Anthony MUDET", email = "anthony.mudet@etu.univ-nantes.fr" },
+    { name = "Léo FERMÉ", email = "leo.ferme@etu.univ-nantes.fr" },
+    { name = "Mohamed Lamine MERAH", email = "mohamed.merah@etu.univ-nantes.fr" }
+]
+# Co-authors
+co-authors = [
+    { name = "Pr. Pascal MOLLI", email = "pascal.molli@univ-nantes.fr" },
+    { name = "Pr. Hala SKAF-MOLLI", email = "hala.skaf@univ-nantes.fr" },
+    { name = "Pr. Gabriela MONTOYA", email = "gabriela.montoya@univ-nantes.fr" }
+]
+license = { file = "LICENSE.txt" }
+keywords = [
+    "SPARQL",
+    "Algebra",
+    "Olaf Hartig",
+    "Query Processing",
+    "Semantic Web",
+    "LS2N",
+    "Nantes Universite"
+]
+classifiers = [ # TODO : Adjust classifiers as needed
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# 3. Dependencies
+dependencies = [
+
+]
+
+# 4. Optional Dependencies (for development)
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
+# 5. Project URLs
+[project.urls]
+Homepage = "https://github.com/Armotik/pyhartig"
+Repository = "https://github.com/votre-username/pyhartig"
+Theoretical-Foundation = "https://arxiv.org/abs/2503.10385"
