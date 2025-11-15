@@ -41,7 +41,7 @@ For development, it is highly recommended to install the library in "editable" m
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/votre-username/pyhartig.git](https://github.com/votre-username/pyhartig.git)
+   git clone [https://github.com/Armotik/pyhartig](https://github.com/Armotik/pyhartig)
    cd pyhartig
    ```
 

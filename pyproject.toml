@@ -57,5 +57,5 @@ test = [
 # 5. Project URLs
 [project.urls]
 Homepage = "https://github.com/Armotik/pyhartig"
-Repository = "https://github.com/votre-username/pyhartig"
+Repository = "https://github.com/Armotik/pyhartig"
 Theoretical-Foundation = "https://arxiv.org/abs/2503.10385"
