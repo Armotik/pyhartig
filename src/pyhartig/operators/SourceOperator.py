@@ -1,8 +1,12 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any, Dict, List
 from itertools import product
 
-class SourceOperator(ABC):
+from pyhartig.algebra.Tuple import MappingTuple
+from pyhartig.operators.Operator import Operator
+
+
+class SourceOperator(Operator):
     """
     Abstract class defining the algebraic logic of the Source operator
     """
@@ -14,6 +18,7 @@ class SourceOperator(ABC):
         :param iterator_query: Iterative query that selects a set of context objects from s
         :param attribute_mappings: Mapping that associates an attribute a with an extraction query q'
         """
+        super().__init__()
         self.source_data = source_data
         self.iterator_query = iterator_query
         self.attribute_mappings = attribute_mappings
@@ -38,7 +43,7 @@ class SourceOperator(ABC):
         """
         pass
 
-    def execute(self) -> list[Any]:
+    def execute(self) -> List[MappingTuple]:
         """
         Execute the Source operator logic
         :return: List of rows resulting from the Source operator
@@ -64,7 +69,8 @@ class SourceOperator(ABC):
 
             # Generate all combinations of extracted values
             for combination in product(*values_lists):
-                row = dict(zip(keys, combination))
+                row_dict = dict(zip(keys, combination))
+                row = MappingTuple(row_dict)
                 result.append(row)
 
         return result

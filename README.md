@@ -55,8 +55,6 @@ For development, it is highly recommended to install the library in "editable" m
    ```bash
    pip install -e '.[test]'
    ```
-   The `-e` flag links your installation to your `src/` directory, so any code changes are immediately available.
-
 ## 5. Authors
 
 This project is developed by:

@@ -163,4 +163,3 @@ def test_missing_path_handling(sample_json_data):
     print("[DEBUG] test_missing_path_handling - results:", results)
 
     assert len(results) == 0
-
