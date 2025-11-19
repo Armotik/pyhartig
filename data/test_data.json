@@ -1,0 +1,17 @@
+{
+  "project": "SPARQLLM Beta",
+  "team": [
+    {
+      "id": 1,
+      "name": "Alice",
+      "roles": ["Dev", "Admin"],
+      "skills": ["Python", "RDF"]
+    },
+    {
+      "id": 2,
+      "name": "Bob",
+      "roles": ["User"],
+      "skills": ["Java"]
+    }
+  ]
+}

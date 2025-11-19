@@ -18,12 +18,6 @@ authors = [
     { name = "Léo FERMÉ", email = "leo.ferme@etu.univ-nantes.fr" },
     { name = "Mohamed Lamine MERAH", email = "mohamed.merah@etu.univ-nantes.fr" }
 ]
-# Co-authors
-co-authors = [
-    { name = "Pr. Pascal MOLLI", email = "pascal.molli@univ-nantes.fr" },
-    { name = "Pr. Hala SKAF-MOLLI", email = "hala.skaf@univ-nantes.fr" },
-    { name = "Pr. Gabriela MONTOYA", email = "gabriela.montoya@univ-nantes.fr" }
-]
 license = { file = "LICENSE.txt" }
 keywords = [
     "SPARQL",
