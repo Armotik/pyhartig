@@ -14,8 +14,7 @@ This library is a research project developed for the **"Engineering For Research
 
 It is part of the **M1 Computer Science, SMART Computing Master's Program** at **Nantes Université**.
 
-The project is hosted by the **LS2N (Laboratoire des Sciences du Numérique de Nantes)**, within the **GDD (Graphes,
-Données, Décision) team**.
+The project is hosted by the **LS2N (Laboratoire des Sciences du Numérique de Nantes)**, within the **GDD (Gestion des Données Distribuées) team**.
 
 It serves as the core logical component for the **MCP-SPARQLLM** project, aiming to translate heterogeneous data sources
 into RDF Knowledge Graphs via algebraic operators.
