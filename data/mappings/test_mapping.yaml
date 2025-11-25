@@ -1,0 +1,22 @@
+prefixes:
+  ex: "http://example.org/"
+  rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xsd: "http://www.w3.org/2001/XMLSchema#"
+
+mappings:
+  - name: PersonMapping
+    logicalSource:
+      jsonpath: "people"
+    subject: "http://example.org/{id}"
+    po:
+      - p: "rdf:type@iri"
+        o: "http://example.org/Person@iri"
+
+      - p: "http://example.org/name"
+        o: "$.name"                 # littéral (émis seulement si non nul)
+
+      - p: "http://example.org/age"
+        o: "$.age^^xsd:int"         # littéral typé xsd:int (si présent)
+
+      - p: "http://example.org/label"
+        o: "$.labels.fr@fr"         # littéral avec tag de langue fr (si présent)

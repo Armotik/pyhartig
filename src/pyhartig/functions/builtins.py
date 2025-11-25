@@ -1,32 +1,32 @@
-from typing import Any, Union
+from typing import Union
 import urllib.parse
 
-from pyhartig.algebra.Tuple import EPSILON, _Epsilon
-from pyhartig.algebra.Terms import IRI, Literal, BlankNode, RdfTerm
+from pyhartig.algebra.Tuple import EPSILON, _Epsilon, AlgebraicValue
+from pyhartig.algebra.Terms import IRI, Literal
 
-# Aliases for input types (native Python or RDF Term)
-Value = Union[str, int, float, bool, RdfTerm, None, _Epsilon]
-
-
-def _to_string(value: Value) -> Union[str, None]:
+def _to_string(value: AlgebraicValue) -> Union[str, None]:
     """
-    Convert a Value to its string representation if possible.
+    Convert a AlgebraicValue to its string representation if possible.
     :param value: Value to convert
     :return: String representation or None if conversion is not possible
     """
-    # Check for native string
+    # Check for primitive types
     if isinstance(value, str):
         return value
+    if isinstance(value, (int, float, bool)):
+        return str(value)
 
-    # Check for RDF Literal with xsd:string datatype
-    if isinstance(value, Literal) and value.datatype_iri == "http://www.w3.org/2001/XMLSchema#string":
+    # Check for Algebraic Terms
+    if isinstance(value, Literal):
         return value.lexical_form
+    if isinstance(value, IRI):
+        return value.value
     return None
 
 
-def to_iri(value: Value, base: str = None) -> Union[IRI, _Epsilon]:
+def to_iri(value: AlgebraicValue, base: str = None) -> Union[IRI, _Epsilon]:
     """
-    Convert a Value to an IRI, resolving against a base if provided.
+    Convert a AlgebraicValue to an IRI, resolving against a base if provided.
     :param value: Value to convert
     :param base: Optional base IRI for resolution
     :return: IRI or EPSILON if conversion is not possible
@@ -55,9 +55,9 @@ def to_iri(value: Value, base: str = None) -> Union[IRI, _Epsilon]:
     return EPSILON
 
 
-def to_literal(value: Value, datatype: str) -> Union[Literal, _Epsilon]:
+def to_literal(value: AlgebraicValue, datatype: str) -> Union[Literal, _Epsilon]:
     """
-    Convert a Value to a Literal with the specified datatype.
+    Convert an AlgebraicValue to a Literal with the specified datatype.
     :param value: Value to convert
     :param datatype: Datatype IRI for the Literal
     :return: Literal or EPSILON if conversion is not possible
@@ -73,22 +73,24 @@ def to_literal(value: Value, datatype: str) -> Union[Literal, _Epsilon]:
     # Handle BlankNode case (not convertible to Literal)
     elif isinstance(value, IRI):
         lex = value.value
+    elif isinstance(value, (int, float, bool)):
+        lex = str(value)
 
     return Literal(lex, datatype)
 
 
-def concat(val1: Value, val2: Value) -> Union[Literal, _Epsilon]:
+def concat(*args: AlgebraicValue) -> Union[Literal, _Epsilon]:
     """
-    Concatenate two Values as strings.
-    :param val1: first Value
-    :param val2: second Value
+    Concatenate multiple AlgebraicValues into a single string Literal.
+    :param args: Values to concatenate
     :return: Literal with concatenated string or EPSILON if conversion is not possible
     """
-    str1 = _to_string(val1)
-    str2 = _to_string(val2)
+    result_str = ""
+    for val in args:
+        s = _to_string(val)
+        if s is None:
+            # If any argument is invalid/Epsilon, propagate error
+            return EPSILON
+        result_str += s
 
-    # If both can be converted to strings, concatenate them
-    if str1 is not None and str2 is not None:
-        return Literal(str1 + str2, "http://www.w3.org/2001/XMLSchema#string")
-
-    return EPSILON
+    return Literal(result_str, "http://www.w3.org/2001/XMLSchema#string")

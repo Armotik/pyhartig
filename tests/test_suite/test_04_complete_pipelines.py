@@ -1,0 +1,505 @@
+"""
+Test Suite for Complete Pipelines
+
+This module provides end-to-end tests for complete data transformation
+pipelines, demonstrating realistic use cases that combine multiple
+operators and transformations to produce RDF-like output structures.
+"""
+
+import pytest
+import json
+from pathlib import Path
+from pyhartig.operators.sources.JsonSourceOperator import JsonSourceOperator
+from pyhartig.operators.ExtendOperator import ExtendOperator
+from pyhartig.expressions.Constant import Constant
+from pyhartig.expressions.Reference import Reference
+from pyhartig.expressions.FunctionCall import FunctionCall
+from pyhartig.functions.builtins import to_iri, to_literal, concat
+from pyhartig.algebra.Terms import IRI, Literal
+
+
+class TestCompletePipelines:
+    """Test suite for complete end-to-end data transformation pipelines."""
+
+    @pytest.fixture
+    def debug_logger(self):
+        """
+        Fixture providing a debug logging function.
+        
+        Returns:
+            callable: Function for structured debug output
+        """
+        def log(section, message):
+            print(f"\n{'=' * 80}")
+            print(f"[DEBUG] {section}")
+            print(f"{'-' * 80}")
+            print(message)
+            print(f"{'=' * 80}\n")
+        return log
+
+    @pytest.fixture
+    def test_data_path(self):
+        """
+        Fixture providing path to test data file.
+        
+        Returns:
+            Path: Path to test_data.json
+        """
+        return Path(__file__).parent.parent.parent / "data" / "test_data.json"
+
+    @pytest.fixture
+    def load_test_data(self, test_data_path):
+        """
+        Fixture loading test data from file.
+        
+        Returns:
+            dict: Parsed JSON test data
+        """
+        with open(test_data_path, 'r') as f:
+            return json.load(f)
+
+    def test_rdf_triples_generation_pipeline(self, load_test_data, debug_logger):
+        """
+        Test complete pipeline for RDF triple generation.
+        
+        Simulates a realistic scenario: extracting JSON data and
+        transforming it into RDF-like triple structures with proper
+        subject, predicate, and object handling.
+        """
+        debug_logger("Test: RDF Triple Generation Pipeline", 
+                     f"Objective: Transform JSON to RDF triple structure\n"
+                     f"Input data: {json.dumps(load_test_data, indent=2)}")
+        
+        # Stage 1: Extract team members
+        source_op = JsonSourceOperator(
+            source_data=load_test_data,
+            iterator_query="$.team[*]",
+            attribute_mappings={
+                "member_id": "$.id",
+                "member_name": "$.name",
+                "role": "$.roles[*]",
+                "skill": "$.skills[*]"
+            }
+        )
+        
+        debug_logger("Stage 1: Source Operator", 
+                     f"Iterator: $.team[*]\n"
+                     f"Attributes:\n"
+                     f"  - member_id: $.id\n"
+                     f"  - member_name: $.name\n"
+                     f"  - role: $.roles[*]\n"
+                     f"  - skill: $.skills[*]\n"
+                     f"Note: Cartesian product over roles and skills")
+        
+        # Stage 2: Generate subject IRI
+        subject_expr = FunctionCall(
+            function=to_iri,
+            arguments=[
+                Reference("member_id"),
+                Constant("http://example.org/person/")
+            ]
+        )
+        extend_subject = ExtendOperator(
+            parent_operator=source_op,
+            new_attribute="subject",
+            expression=subject_expr
+        )
+        
+        debug_logger("Stage 2: Generate Subject IRI", 
+                     "subject = to_iri(member_id, 'http://example.org/person/')")
+        
+        # Stage 3: Add RDF type
+        extend_type = ExtendOperator(
+            parent_operator=extend_subject,
+            new_attribute="rdf_type",
+            expression=Constant(IRI("http://xmlns.com/foaf/0.1/Person"))
+        )
+        
+        debug_logger("Stage 3: Add RDF Type", 
+                     "rdf_type = foaf:Person (constant)")
+        
+        # Stage 4: Convert name to literal
+        name_literal_expr = FunctionCall(
+            function=to_literal,
+            arguments=[
+                Reference("member_name"),
+                Constant("http://www.w3.org/2001/XMLSchema#string")
+            ]
+        )
+        extend_name = ExtendOperator(
+            parent_operator=extend_type,
+            new_attribute="name_literal",
+            expression=name_literal_expr
+        )
+        
+        debug_logger("Stage 4: Convert Name to Literal", 
+                     "name_literal = to_literal(member_name, xsd:string)")
+        
+        # Stage 5: Convert role to literal
+        role_literal_expr = FunctionCall(
+            function=to_literal,
+            arguments=[
+                Reference("role"),
+                Constant("http://www.w3.org/2001/XMLSchema#string")
+            ]
+        )
+        extend_role = ExtendOperator(
+            parent_operator=extend_name,
+            new_attribute="role_literal",
+            expression=role_literal_expr
+        )
+        
+        debug_logger("Stage 5: Convert Role to Literal", 
+                     "role_literal = to_literal(role, xsd:string)")
+        
+        # Execute pipeline
+        result = extend_role.execute()
+        
+        debug_logger("Pipeline Execution Result", 
+                     f"Total tuples generated: {len(result)}\n"
+                     f"First 5 tuples:\n" + 
+                     "\n".join(f"  {i+1}. {tuple}" for i, tuple in enumerate(result[:5])))
+        
+        # Validate results
+        assert len(result) > 0, "Pipeline should generate tuples"
+        
+        # Check structure of first tuple
+        first_tuple = result[0]
+        assert "subject" in first_tuple
+        assert "rdf_type" in first_tuple
+        assert "name_literal" in first_tuple
+        assert "role_literal" in first_tuple
+        
+        # Type checks
+        assert isinstance(first_tuple["subject"], IRI)
+        assert isinstance(first_tuple["rdf_type"], IRI)
+        assert isinstance(first_tuple["name_literal"], Literal)
+        assert isinstance(first_tuple["role_literal"], Literal)
+        
+        # Alice has 2 roles and 2 skills → 4 combinations
+        # Bob has 1 role and 1 skill → 1 combination
+        # Total: 5 tuples
+        assert len(result) == 5
+        
+        alice_tuples = [t for t in result if t["member_name"] == "Alice"]
+        bob_tuples = [t for t in result if t["member_name"] == "Bob"]
+        
+        assert len(alice_tuples) == 4
+        assert len(bob_tuples) == 1
+        
+        debug_logger("Validation Results", 
+                     f"✓ Pipeline executed successfully\n"
+                     f"✓ Total tuples: {len(result)}\n"
+                     f"✓ Alice tuples: {len(alice_tuples)}\n"
+                     f"✓ Bob tuples: {len(bob_tuples)}\n"
+                     f"✓ All RDF structures properly typed\n\n"
+                     f"Sample triple structure:\n"
+                     f"  Subject: {first_tuple['subject']}\n"
+                     f"  Type: {first_tuple['rdf_type']}\n"
+                     f"  Name: {first_tuple['name_literal']}\n"
+                     f"  Role: {first_tuple['role_literal']}")
+
+    def test_person_profile_pipeline(self, debug_logger):
+        """
+        Test pipeline for generating person profiles with metadata.
+        
+        Demonstrates a practical pipeline that enriches person data
+        with computed attributes and RDF representations.
+        """
+        debug_logger("Test: Person Profile Generation Pipeline", 
+                     "Objective: Generate enriched person profiles")
+        
+        data = {
+            "persons": [
+                {
+                    "id": "emp001",
+                    "firstName": "Alice",
+                    "lastName": "Smith",
+                    "age": 30,
+                    "department": "Engineering"
+                },
+                {
+                    "id": "emp002",
+                    "firstName": "Bob",
+                    "lastName": "Jones",
+                    "age": 25,
+                    "department": "Sales"
+                }
+            ]
+        }
+        
+        debug_logger("Input Data", json.dumps(data, indent=2))
+        
+        # Source
+        source = JsonSourceOperator(
+            source_data=data,
+            iterator_query="$.persons[*]",
+            attribute_mappings={
+                "emp_id": "$.id",
+                "first": "$.firstName",
+                "last": "$.lastName",
+                "age": "$.age",
+                "dept": "$.department"
+            }
+        )
+        
+        # Generate URI
+        uri_expr = FunctionCall(
+            function=to_iri,
+            arguments=[
+                Reference("emp_id"),
+                Constant("http://company.org/employee/")
+            ]
+        )
+        pipeline = ExtendOperator(source, "uri", uri_expr)
+        
+        # Full name
+        full_name_expr = FunctionCall(
+            function=concat,
+            arguments=[
+                Reference("first"),
+                Constant(" "),
+                Reference("last")
+            ]
+        )
+        pipeline = ExtendOperator(pipeline, "full_name", full_name_expr)
+        
+        # Full name as literal
+        full_name_lit_expr = FunctionCall(
+            function=to_literal,
+            arguments=[
+                Reference("full_name"),
+                Constant("http://www.w3.org/2001/XMLSchema#string")
+            ]
+        )
+        pipeline = ExtendOperator(pipeline, "name_lit", full_name_lit_expr)
+        
+        # Age as literal
+        age_lit_expr = FunctionCall(
+            function=to_literal,
+            arguments=[
+                Reference("age"),
+                Constant("http://www.w3.org/2001/XMLSchema#integer")
+            ]
+        )
+        pipeline = ExtendOperator(pipeline, "age_lit", age_lit_expr)
+        
+        # Department IRI
+        dept_iri_expr = FunctionCall(
+            function=to_iri,
+            arguments=[
+                Reference("dept"),
+                Constant("http://company.org/department/")
+            ]
+        )
+        pipeline = ExtendOperator(pipeline, "dept_uri", dept_iri_expr)
+        
+        debug_logger("Pipeline Configuration", 
+                     f"5-stage extension pipeline:\n"
+                     f"  1. uri = to_iri(emp_id, base)\n"
+                     f"  2. full_name = concat(first, ' ', last)\n"
+                     f"  3. name_lit = to_literal(full_name, xsd:string)\n"
+                     f"  4. age_lit = to_literal(age, xsd:integer)\n"
+                     f"  5. dept_uri = to_iri(dept, dept_base)")
+        
+        result = pipeline.execute()
+        
+        debug_logger("Execution Result", 
+                     f"Number of profiles: {len(result)}\n"
+                     f"Profiles:\n" + 
+                     "\n".join(f"  {i+1}. {tuple}" for i, tuple in enumerate(result)))
+        
+        assert len(result) == 2
+        
+        # Validate Alice's profile
+        alice = result[0]
+        assert alice["uri"].value == "http://company.org/employee/emp001"
+        assert alice["full_name"].lexical_form == "Alice Smith"
+        assert alice["name_lit"].lexical_form == "Alice Smith"
+        assert alice["age_lit"].lexical_form == "30"
+        assert alice["dept_uri"].value == "http://company.org/department/Engineering"
+        
+        debug_logger("Validation", 
+                     f"✓ Person profiles generated successfully\n"
+                     f"✓ Alice profile:\n"
+                     f"    URI: {alice['uri']}\n"
+                     f"    Full name: {alice['full_name']}\n"
+                     f"    Age literal: {alice['age_lit']}\n"
+                     f"    Department URI: {alice['dept_uri']}")
+
+    def test_hierarchical_data_pipeline(self, debug_logger):
+        """
+        Test pipeline processing hierarchical data structures.
+        
+        Validates handling of nested data with multiple levels
+        and complex relationships.
+        """
+        debug_logger("Test: Hierarchical Data Pipeline", 
+                     "Objective: Process nested organizational structure")
+        
+        data = {
+            "company": {
+                "name": "TechCorp",
+                "divisions": [
+                    {
+                        "id": "div1",
+                        "name": "R&D",
+                        "projects": [
+                            {"code": "P001", "title": "AI Research"},
+                            {"code": "P002", "title": "Data Platform"}
+                        ]
+                    },
+                    {
+                        "id": "div2",
+                        "name": "Operations",
+                        "projects": [
+                            {"code": "P003", "title": "Infrastructure"}
+                        ]
+                    }
+                ]
+            }
+        }
+        
+        debug_logger("Input Data", json.dumps(data, indent=2))
+        
+        # Source: iterate over projects within divisions
+        source = JsonSourceOperator(
+            source_data=data,
+            iterator_query="$.company.divisions[*].projects[*]",
+            attribute_mappings={
+                "project_code": "$.code",
+                "project_title": "$.title"
+            }
+        )
+        
+        # Generate project URI
+        proj_uri_expr = FunctionCall(
+            function=to_iri,
+            arguments=[
+                Reference("project_code"),
+                Constant("http://techcorp.org/project/")
+            ]
+        )
+        pipeline = ExtendOperator(source, "project_uri", proj_uri_expr)
+        
+        # Add project type
+        pipeline = ExtendOperator(
+            pipeline,
+            "project_type",
+            Constant(IRI("http://techcorp.org/ontology/Project"))
+        )
+        
+        # Title as literal
+        title_lit_expr = FunctionCall(
+            function=to_literal,
+            arguments=[
+                Reference("project_title"),
+                Constant("http://www.w3.org/2001/XMLSchema#string")
+            ]
+        )
+        pipeline = ExtendOperator(pipeline, "title_lit", title_lit_expr)
+        
+        debug_logger("Pipeline Configuration", 
+                     f"Processing nested structure:\n"
+                     f"  Iterator: $.company.divisions[*].projects[*]\n"
+                     f"  Extensions: project_uri, project_type, title_lit")
+        
+        result = pipeline.execute()
+        
+        debug_logger("Execution Result", 
+                     f"Number of projects: {len(result)}\n"
+                     f"Projects:\n" + 
+                     "\n".join(f"  {i+1}. {tuple}" for i, tuple in enumerate(result)))
+        
+        # 3 projects total
+        assert len(result) == 3
+        
+        # Check all have required attributes
+        for project in result:
+            assert "project_uri" in project
+            assert "project_type" in project
+            assert "title_lit" in project
+            assert isinstance(project["project_uri"], IRI)
+            assert isinstance(project["project_type"], IRI)
+            assert isinstance(project["title_lit"], Literal)
+        
+        # Check specific projects
+        p001 = [p for p in result if p["project_code"] == "P001"][0]
+        assert p001["project_uri"].value == "http://techcorp.org/project/P001"
+        assert p001["title_lit"].lexical_form == "AI Research"
+        
+        debug_logger("Validation", 
+                     f"✓ Hierarchical data processed successfully\n"
+                     f"✓ 3 projects extracted from nested structure\n"
+                     f"✓ Sample project: {p001['project_uri']}")
+
+    def test_error_resilient_pipeline(self, debug_logger):
+        """
+        Test pipeline resilience with incomplete data.
+        
+        Validates graceful handling of missing or incomplete data
+        in realistic scenarios.
+        """
+        debug_logger("Test: Error-Resilient Pipeline", 
+                     "Objective: Handle incomplete data gracefully")
+        
+        data = {
+            "entries": [
+                {"id": "1", "value": "Complete"},
+                {"id": "2"},  # Missing value
+                {"id": "3", "value": "AlsoComplete"}
+            ]
+        }
+        
+        debug_logger("Input Data", 
+                     f"{json.dumps(data, indent=2)}\n"
+                     f"Note: Entry 2 has missing 'value' attribute")
+        
+        source = JsonSourceOperator(
+            source_data=data,
+            iterator_query="$.entries[*]",
+            attribute_mappings={
+                "entry_id": "$.id",
+                "entry_value": "$.value"
+            }
+        )
+        
+        # Generate URI from ID
+        uri_expr = FunctionCall(
+            function=to_iri,
+            arguments=[
+                Reference("entry_id"),
+                Constant("http://example.org/entry/")
+            ]
+        )
+        pipeline = ExtendOperator(source, "uri", uri_expr)
+        
+        # Try to convert value to literal (will be EPSILON for missing)
+        value_lit_expr = FunctionCall(
+            function=to_literal,
+            arguments=[
+                Reference("entry_value"),
+                Constant("http://www.w3.org/2001/XMLSchema#string")
+            ]
+        )
+        pipeline = ExtendOperator(pipeline, "value_lit", value_lit_expr)
+        
+        result = pipeline.execute()
+        
+        debug_logger("Execution Result", 
+                     f"Number of tuples: {len(result)}\n"
+                     f"Tuples:\n" + 
+                     "\n".join(f"  {i+1}. {tuple}" for i, tuple in enumerate(result)))
+        
+        # Only entries with all required attributes generate tuples
+        # Entry 2 has missing value, so Cartesian product yields 0 tuples for it
+        assert len(result) == 2
+        
+        entry_ids = {t["entry_id"] for t in result}
+        assert entry_ids == {"1", "3"}
+        
+        debug_logger("Validation", 
+                     f"✓ Pipeline handled incomplete data\n"
+                     f"✓ Generated {len(result)} tuples (incomplete entry filtered)\n"
+                     f"✓ Entry IDs: {entry_ids}")
+
