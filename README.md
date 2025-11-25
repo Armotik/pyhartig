@@ -74,9 +74,18 @@ src/pyhartig/
     └── sources/        # Source operator implementations
         └── JsonSourceOperator.py # JSON data source operator
 tests/                  # Unit tests for all components
-├── test_builtins.py    # Tests for built-in functions
-├── test_expressions.py # Tests for expression evaluations
-└── test_operators.py   # Tests for algebraic operators
+└── test_suite
+    ├── conftest.py      # Pytest configuration
+    ├── run_all_tests.py # Script to run all tests
+    ├── test_01_source_operator.py  # Tests for SourceOperator
+    ├── test_02_extend_operator.py  # Tests for ExtendOperator
+    ├── test_03_operator_composition.py # Tests for operator chaining
+    ├── test_04_complete_pipelines.py  # End-to-end pipeline tests
+    ├── test_05_builtin_functions.py   # Tests for built-in functions
+    ├── test_06_expression_system.py    # Tests for expression evaluation
+    ├── test_07_library_integration.py  # Tests for external library integration
+    ├── test_08_real_data_integration.py  # Tests with real project data
+    └── TEST_SUITE_RESULTS.md  # A little report of the test suite results
 LICENSE                 # MIT License
 README.md               # Project documentation
 pyproject.toml          # Project configuration and dependencies
