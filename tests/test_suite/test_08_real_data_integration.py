@@ -2,7 +2,7 @@
 Test Suite for Real Data Integration
 
 This module provides integration tests using actual project data files,
-including the test_data.json and test_mapping.yaml files. These tests
+including the test_data.json and test_mapping.rml files. These tests
 validate end-to-end functionality with realistic data scenarios.
 """
 
@@ -62,12 +62,12 @@ class TestRealDataIntegration:
     @pytest.fixture
     def mapping_yaml_path(self, data_dir):
         """
-        Fixture providing path to test_mapping.yaml.
+        Fixture providing path to test_mapping.rml.
         
         Returns:
             Path: Path to mapping file
         """
-        return data_dir / "mappings" / "test_mapping.yaml"
+        return data_dir / "mappings" / "test_mapping.rml"
 
     def test_load_test_data_file(self, test_data_json, debug_logger):
         """

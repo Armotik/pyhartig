@@ -1,0 +1,271 @@
+[
+  {
+    "id": 23788,
+    "iid": 4,
+    "project_id": 32560,
+    "title": "Test issue 4",
+    "description": "Just a test issue",
+    "state": "opened",
+    "created_at": "2025-11-26T10:04:57.000+01:00",
+    "updated_at": "2025-11-26T10:04:57.000+01:00",
+    "closed_at": null,
+    "closed_by": null,
+    "labels": [],
+    "milestone": null,
+    "assignees": [],
+    "author": {
+      "id": 18650,
+      "username": "import_user_E253432U_KmSA",
+      "public_email": null,
+      "name": "Import User",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/e37b98488aa2aba3f7e6074c44362c1bb011874d6296fcd83da4fafd2bb7f0aa?s=80\u0026d=identicon",
+      "web_url": "https://gitlab.univ-nantes.fr/import_user_E253432U_KmSA"
+    },
+    "type": "ISSUE",
+    "assignee": null,
+    "user_notes_count": 0,
+    "merge_requests_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "due_date": null,
+    "confidential": false,
+    "discussion_locked": null,
+    "issue_type": "issue",
+    "web_url": "https://gitlab.univ-nantes.fr/E253432U/pyhartig/-/issues/4",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_tasks": true,
+    "task_status": "0 of 0 checklist items completed",
+    "_links": {
+      "self": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/4",
+      "notes": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/4/notes",
+      "award_emoji": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/4/award_emoji",
+      "project": "https://gitlab.univ-nantes.fr/api/v4/projects/32560",
+      "closed_as_duplicate_of": null
+    },
+    "references": {
+      "short": "#4",
+      "relative": "#4",
+      "full": "E253432U/pyhartig#4"
+    },
+    "severity": "UNKNOWN",
+    "moved_to_id": null,
+    "imported": true,
+    "imported_from": "github",
+    "service_desk_reply_to": null
+  },
+  {
+    "id": 23789,
+    "iid": 3,
+    "project_id": 32560,
+    "title": "Test issue 3",
+    "description": "Just a test issue",
+    "state": "opened",
+    "created_at": "2025-11-26T10:04:45.000+01:00",
+    "updated_at": "2025-11-26T10:05:38.000+01:00",
+    "closed_at": null,
+    "closed_by": null,
+    "labels": [
+      "bug",
+      "documentation"
+    ],
+    "milestone": null,
+    "assignees": [],
+    "author": {
+      "id": 18650,
+      "username": "import_user_E253432U_KmSA",
+      "public_email": null,
+      "name": "Import User",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/e37b98488aa2aba3f7e6074c44362c1bb011874d6296fcd83da4fafd2bb7f0aa?s=80\u0026d=identicon",
+      "web_url": "https://gitlab.univ-nantes.fr/import_user_E253432U_KmSA"
+    },
+    "type": "ISSUE",
+    "assignee": null,
+    "user_notes_count": 0,
+    "merge_requests_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "due_date": null,
+    "confidential": false,
+    "discussion_locked": null,
+    "issue_type": "issue",
+    "web_url": "https://gitlab.univ-nantes.fr/E253432U/pyhartig/-/issues/3",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_tasks": true,
+    "task_status": "0 of 0 checklist items completed",
+    "_links": {
+      "self": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/3",
+      "notes": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/3/notes",
+      "award_emoji": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/3/award_emoji",
+      "project": "https://gitlab.univ-nantes.fr/api/v4/projects/32560",
+      "closed_as_duplicate_of": null
+    },
+    "references": {
+      "short": "#3",
+      "relative": "#3",
+      "full": "E253432U/pyhartig#3"
+    },
+    "severity": "UNKNOWN",
+    "moved_to_id": null,
+    "imported": true,
+    "imported_from": "github",
+    "service_desk_reply_to": null
+  },
+  {
+    "id": 23790,
+    "iid": 2,
+    "project_id": 32560,
+    "title": "Test issue 2",
+    "description": "Just a test issue",
+    "state": "closed",
+    "created_at": "2025-11-26T10:04:37.000+01:00",
+    "updated_at": "2025-11-26T10:06:07.000+01:00",
+    "closed_at": null,
+    "closed_by": null,
+    "labels": [
+      "wontfix"
+    ],
+    "milestone": null,
+    "assignees": [],
+    "author": {
+      "id": 18650,
+      "username": "import_user_E253432U_KmSA",
+      "public_email": null,
+      "name": "Import User",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/e37b98488aa2aba3f7e6074c44362c1bb011874d6296fcd83da4fafd2bb7f0aa?s=80\u0026d=identicon",
+      "web_url": "https://gitlab.univ-nantes.fr/import_user_E253432U_KmSA"
+    },
+    "type": "ISSUE",
+    "assignee": null,
+    "user_notes_count": 0,
+    "merge_requests_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "due_date": null,
+    "confidential": false,
+    "discussion_locked": null,
+    "issue_type": "issue",
+    "web_url": "https://gitlab.univ-nantes.fr/E253432U/pyhartig/-/issues/2",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_tasks": true,
+    "task_status": "0 of 0 checklist items completed",
+    "_links": {
+      "self": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/2",
+      "notes": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/2/notes",
+      "award_emoji": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/2/award_emoji",
+      "project": "https://gitlab.univ-nantes.fr/api/v4/projects/32560",
+      "closed_as_duplicate_of": null
+    },
+    "references": {
+      "short": "#2",
+      "relative": "#2",
+      "full": "E253432U/pyhartig#2"
+    },
+    "severity": "UNKNOWN",
+    "moved_to_id": null,
+    "imported": true,
+    "imported_from": "github",
+    "service_desk_reply_to": null
+  },
+  {
+    "id": 23787,
+    "iid": 1,
+    "project_id": 32560,
+    "title": "Test Issue 1",
+    "description": "Just a test issue",
+    "state": "closed",
+    "created_at": "2025-11-26T10:04:29.000+01:00",
+    "updated_at": "2025-11-26T10:06:01.000+01:00",
+    "closed_at": null,
+    "closed_by": null,
+    "labels": [
+      "enhancement",
+      "good first issue",
+      "help wanted"
+    ],
+    "milestone": null,
+    "assignees": [],
+    "author": {
+      "id": 18650,
+      "username": "import_user_E253432U_KmSA",
+      "public_email": null,
+      "name": "Import User",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/e37b98488aa2aba3f7e6074c44362c1bb011874d6296fcd83da4fafd2bb7f0aa?s=80\u0026d=identicon",
+      "web_url": "https://gitlab.univ-nantes.fr/import_user_E253432U_KmSA"
+    },
+    "type": "ISSUE",
+    "assignee": null,
+    "user_notes_count": 0,
+    "merge_requests_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "due_date": null,
+    "confidential": false,
+    "discussion_locked": null,
+    "issue_type": "issue",
+    "web_url": "https://gitlab.univ-nantes.fr/E253432U/pyhartig/-/issues/1",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_tasks": true,
+    "task_status": "0 of 0 checklist items completed",
+    "_links": {
+      "self": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/1",
+      "notes": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/1/notes",
+      "award_emoji": "https://gitlab.univ-nantes.fr/api/v4/projects/32560/issues/1/award_emoji",
+      "project": "https://gitlab.univ-nantes.fr/api/v4/projects/32560",
+      "closed_as_duplicate_of": null
+    },
+    "references": {
+      "short": "#1",
+      "relative": "#1",
+      "full": "E253432U/pyhartig#1"
+    },
+    "severity": "UNKNOWN",
+    "moved_to_id": null,
+    "imported": true,
+    "imported_from": "github",
+    "service_desk_reply_to": null
+  }
+]

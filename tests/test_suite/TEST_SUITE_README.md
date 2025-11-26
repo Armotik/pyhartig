@@ -2,7 +2,7 @@
 
 ## Overview
 
-This test suite provides comprehensive validation of the PyHartig. The tests are organized into eight categories, each focusing on specific aspects of the system's functionality.
+This test suite provides comprehensive validation of the PyHartig. The tests are organized into nine categories, each focusing on specific aspects of the system's functionality.
 
 ## Test Organization
 
@@ -52,11 +52,16 @@ This test suite provides comprehensive validation of the PyHartig. The tests are
 - Dependent computed attributes
 - Empty result propagation
 - Parallel extension branches
+- Union with Extend composition
+- Extend after Union
+- Union of complex pipelines
+- Nested Union composition
 
 **Key Features**:
 - Tests operator interoperability
 - Validates complex pipeline construction
 - Ensures data flow integrity
+- **Union operator integration with other operators**
 
 ### 4. Complete Pipeline Tests (`test_04_complete_pipelines.py`)
 
@@ -67,11 +72,15 @@ This test suite provides comprehensive validation of the PyHartig. The tests are
 - Person profile generation
 - Hierarchical data processing
 - Error-resilient pipelines
+- Multi-source Union pipeline
+- Union with post-processing
+- Complex RDF generation with Union
 
 **Key Features**:
 - Realistic use case demonstrations
 - Full transformation workflows
 - Production-like scenarios
+- Multi-source data integration scenarios
 
 ### 5. Built-in Function Tests (`test_05_builtin_functions.py`)
 
@@ -141,6 +150,35 @@ This test suite provides comprehensive validation of the PyHartig. The tests are
 - Validates realistic scenarios
 - Tests with `data/test_data.json` and `data/mappings/test_mapping.yaml`
 
+### 9. Union Operator Tests (`test_09_union_operator.py`)
+
+**Objective**: Validate the Union operator for merging multiple data sources.
+
+**Test Coverage**:
+- Union of two and three sources
+- Union with extended sources (Extend before Union)
+- Union with empty sources
+- Union preserving tuple order
+- Union with different attribute schemas
+- Union duplicate handling (bag semantics)
+- Union single operator edge case
+
+**Key Features**:
+- Tests the `UnionOperator` core functionality
+- Validates multi-source data merging
+- Ensures proper tuple preservation and ordering
+- Tests integration with other operators (Source, Extend)
+- Validates edge cases (empty sources, single operator, duplicates)
+
+**Additional Integration Tests**:
+- Union with Extend composition (in `test_03_operator_composition.py`)
+- Extend after Union (in `test_03_operator_composition.py`)
+- Union of complex pipelines (in `test_03_operator_composition.py`)
+- Nested Union composition (in `test_03_operator_composition.py`)
+- Multi-source Union pipeline (in `test_04_complete_pipelines.py`)
+- Union with post-processing (in `test_04_complete_pipelines.py`)
+- Complex RDF generation with Union (in `test_04_complete_pipelines.py`)
+
 ## Running the Tests
 
 ### Run All Tests
@@ -168,11 +206,17 @@ pytest tests/test_suite/test_01_source_operators.py -v -s
 # Extend operators only
 pytest tests/test_suite/test_02_extend_operators.py -v -s
 
+# Union operators only
+pytest tests/test_suite/test_09_union_operator.py -v -s
+
 # Complete pipelines
 pytest tests/test_suite/test_04_complete_pipelines.py -v -s
 
 # Real data integration
 pytest tests/test_suite/test_08_real_data_integration.py -v -s
+
+# All Union-related tests (across all files)
+pytest tests/test_suite/ -k union -v -s
 ```
 
 ### Run with Markers
@@ -239,9 +283,10 @@ The test suite uses the following data files:
 
 ## Test Statistics
 
-- **Total Test Files**: 8
-- **Test Categories**: Source, Extend, Composition, Pipelines, Functions, Expressions, Libraries, Integration
-- **Coverage Areas**: Operators, Expressions, Functions, Libraries, Real Data
+- **Total Test Files**: 9
+- **Total Tests**: 95
+- **Test Categories**: Source, Extend, Union, Composition, Pipelines, Functions, Expressions, Libraries, Integration
+- **Coverage Areas**: Operators, Expressions, Functions, Libraries, Real Data, Multi-Source Merging
 - **Debug Traces**: Comprehensive output for all tests
 
 ## Requirements
@@ -289,6 +334,6 @@ This test suite is part of the PyHartig project and follows the same license.
 
 ---
 
-**Last Updated**: 2025-11-25
-**Test Suite Version**: 1.0.0
+**Last Updated**: 2025-11-26
+**Test Suite Version**: 2.0.0
 

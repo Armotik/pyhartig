@@ -24,7 +24,7 @@ into RDF Knowledge Graphs via algebraic operators.
 `pyhartig` provides a set of composable Python objects representing the core algebraic operators for querying
 heterogeneous data sources.
 
-Current implementation status covers the foundations required to reproduce **Source** and **Extend** operators as defined in the paper:
+Current implementation status covers the foundations required to reproduce **Source**, **Extend**, and **Union** operators as defined in the paper:
 
 * **Algebraic Structures**: Strict typing for `MappingTuple`, `IRI`, `Literal`, `BlankNode`, and the special error value `EPSILON` ($\epsilon$).
 * **Source Operator**:
@@ -34,6 +34,10 @@ Current implementation status covers the foundations required to reproduce **Sou
 * **Extend Operator**:
     * Implementation of the algebraic extension logic ($Extend_{\varphi}^{a}(r)$).
     * Allows dynamic creation of new attributes based on complex expressions.
+* **Union Operator**:
+    * Implementation of the algebraic union logic for merging multiple data sources.
+    * Preserves tuple order and supports bag semantics (duplicates preserved).
+    * Enables multi-source data integration scenarios.
 * **Expression System ($\varphi$)**:
     * Composite pattern implementation for recursive expressions.
     * Supports `Constant`, `Reference` (attributes), and `FunctionCall`.
@@ -45,7 +49,7 @@ Current implementation status covers the foundations required to reproduce **Sou
 
 This implementation is formally grounded in the algebraic foundation defined by **Olaf Hartig**. We are implementing the
 operators described in his work, which provide a formal semantics for defining data transformation and integration
-operators (like `Source`, `Join`, `Project`, etc.) independent of the specific data source.
+operators independent of the specific data source.
 
 This implementation is formally grounded in the algebraic foundation defined by Olaf Hartig.
 
@@ -70,6 +74,7 @@ src/pyhartig/
 └── operators/          # Algebraic Operators
     ├── Operator.py     # Abstract base class for all operators
     ├── ExtendOperator.py # Extend operator implementation
+    ├── UnionOperator.py  # Union operator implementation
     ├── SourceOperator.py # Abstract Source operator
     └── sources/        # Source operator implementations
         └── JsonSourceOperator.py # JSON data source operator
@@ -85,7 +90,8 @@ tests/                  # Unit tests for all components
     ├── test_06_expression_system.py    # Tests for expression evaluation
     ├── test_07_library_integration.py  # Tests for external library integration
     ├── test_08_real_data_integration.py  # Tests with real project data
-    └── TEST_SUITE_RESULTS.md  # A little report of the test suite results
+    ├── test_09_union_operator.py  # Tests for UnionOperator
+    └── TEST_SUITE_README.md  # Comprehensive test suite documentation
 LICENSE                 # MIT License
 README.md               # Project documentation
 pyproject.toml          # Project configuration and dependencies
@@ -181,15 +187,15 @@ from pyhartig.expressions.Constant import Constant
 from pyhartig.expressions.Reference import Reference
 from pyhartig.functions.builtins import concat, to_iri
 
-# Assume 'source_op' is the operator from Example 5.1
+# Assume 'source_op' is the operator from Example 6.1
 
-# Define the Expression: toIRI(concat("[http://example.org/user/](http://example.org/user/)", Reference("user_id")))
+# Define the Expression: toIRI(concat("http://example.org/user/", Reference("user_id")))
 expr = FunctionCall(
     to_iri,
     [
         FunctionCall(
             concat,
-            [Constant("[http://example.org/user/](http://example.org/user/)"), Reference("user_id")]
+            [Constant("http://example.org/user/"), Reference("user_id")]
         )
     ]
 )
@@ -207,6 +213,57 @@ for row in results:
     print(f"User: {row['user_name']} -> URI: {row['subject']}")
 ```
 
+### 6.4 Merging Multiple Data Sources (Union Operator)
+
+```python
+from pyhartig.operators.UnionOperator import UnionOperator
+from pyhartig.operators.sources.JsonSourceOperator import JsonSourceOperator
+
+# Data from different departments
+engineering_data = {
+    "employees": [
+        {"id": "E001", "name": "Alice", "dept": "Engineering"},
+        {"id": "E002", "name": "Bob", "dept": "Engineering"}
+    ]
+}
+
+marketing_data = {
+    "employees": [
+        {"id": "M001", "name": "Charlie", "dept": "Marketing"},
+        {"id": "M002", "name": "Diana", "dept": "Marketing"}
+    ]
+}
+
+# Create source operators for each department
+source_eng = JsonSourceOperator(
+    source_data=engineering_data,
+    iterator_query="$.employees[*]",
+    attribute_mappings={
+        "emp_id": "$.id",
+        "emp_name": "$.name",
+        "department": "$.dept"
+    }
+)
+
+source_mkt = JsonSourceOperator(
+    source_data=marketing_data,
+    iterator_query="$.employees[*]",
+    attribute_mappings={
+        "emp_id": "$.id",
+        "emp_name": "$.name",
+        "department": "$.dept"
+    }
+)
+
+# Union the two sources
+union_op = UnionOperator(operators=[source_eng, source_mkt])
+results = union_op.execute()
+
+# Output: 4 employees (2 from Engineering + 2 from Marketing)
+for row in results:
+    print(f"{row['emp_name']} - {row['department']}")
+```
+
 ## 7. Testing
 
 This project uses `pytest` for unit testing. To run the tests, ensure you have installed the test dependencies and execute:
@@ -220,11 +277,12 @@ Tests cover:
 - JSONPath extraction.
 - Built-in functions correctness and error propagation.
 - Recursive expression evaluation.
-- Operator chaining (`Source` -> `Extend`).
+- Operator chaining (`Source` -> `Extend` -> `Union`).
+- Multi-source data merging and integration.
 
 ### 7.1. Comprehensive Test Suite
 
-The project includes a comprehensive test suite with **73 tests** organized into **8 categories**, all of which pass successfully. Below are representative examples from each category with their results.
+The project includes a comprehensive test suite with **95 tests** organized into **9 categories**, all of which pass successfully. Below are representative examples from each category with their results.
 
 #### 7.1.1. Source Operator Tests
 
@@ -409,17 +467,49 @@ Tests the entire system using the actual project data file (`data/test_data.json
 
 **Result:** ✓ Pipeline executed successfully on real data with correct Cartesian product handling.
 
+#### 7.1.9. Union Operator Tests
+
+**Example: Union with Post-Processing**
+
+Tests merging data from different sources and applying uniform transformations to the merged result.
+
+```python
+# Input: Authors and Contributors from different data sources
+# Pipeline 1: Authors → Extend(role='Author')
+# Pipeline 2: Contributors → Extend(role='Contributor')
+# Pipeline 3: Union(Pipeline1, Pipeline2)
+# Pipeline 4-6: Post-process with URI, full_name, and label generation
+
+# Results: 4 persons (2 authors + 2 contributors)
+# Sample output:
+# label="Alice Smith (Author)"
+# label="Charlie Brown (Contributor)"
+```
+
+**Result:** ✓ Multi-source union with post-processing successful. All 4 persons merged and uniformly transformed with roles preserved.
+
+**Additional Union Test Coverage:**
+- Union of two and three sources
+- Union with extended sources (Extend before Union)
+- Extend after Union (post-processing)
+- Union of complex multi-stage pipelines
+- Nested Union composition (Union of Unions)
+- Union with empty sources and edge cases
+- Union preserving tuple order (bag semantics)
+- Union with different attribute schemas
+
 ### 7.2. Test Suite Summary
 
 **Execution Results:**
-- **Total Tests:** 73
-- **Passed:** 73 (100%)
+- **Total Tests:** 95
+- **Passed:** 95 (100%)
 - **Failed:** 0
-- **Execution Time:** ~1.00s
+- **Execution Time:** ~2.00s
 
 **Coverage:**
 - Source operators with JSONPath integration
 - Extend operators with expression evaluation
+- Union operators for multi-source data merging
 - Operator composition and chaining
 - Complete end-to-end pipelines
 - Built-in RDF functions (toIRI, toLiteral, concat)

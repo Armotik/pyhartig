@@ -9,6 +9,7 @@ Tests demonstrate how operators combine to form complex data pipelines.
 import pytest
 from pyhartig.operators.sources.JsonSourceOperator import JsonSourceOperator
 from pyhartig.operators.ExtendOperator import ExtendOperator
+from pyhartig.operators.UnionOperator import UnionOperator
 from pyhartig.expressions.Constant import Constant
 from pyhartig.expressions.Reference import Reference
 from pyhartig.expressions.FunctionCall import FunctionCall
@@ -436,3 +437,310 @@ class TestOperatorComposition:
         debug_logger("Validation",
                      "✓ Parallel branches execute independently\n"
                      "✓ Each branch has distinct attributes")
+
+    def test_union_with_extend_composition(self, debug_logger):
+        """
+        Test Union operator combined with Extend operators.
+
+        Validates that Union correctly merges results from multiple
+        extended sources.
+        """
+        debug_logger("Test: Union with Extend Composition",
+                     "Objective: Merge multiple extended pipelines")
+
+        # First pipeline: Engineering team
+        data_eng = {
+            "team": [
+                {"id": 1, "name": "Alice"},
+                {"id": 2, "name": "Bob"}
+            ]
+        }
+
+        source_eng = JsonSourceOperator(
+            source_data=data_eng,
+            iterator_query="$.team[*]",
+            attribute_mappings={"person_id": "$.id", "person_name": "$.name"}
+        )
+
+        extend_eng = ExtendOperator(
+            parent_operator=source_eng,
+            new_attribute="department",
+            expression=Constant(Literal("Engineering"))
+        )
+
+        # Second pipeline: Marketing team
+        data_mkt = {
+            "team": [
+                {"id": 3, "name": "Charlie"},
+                {"id": 4, "name": "Diana"}
+            ]
+        }
+
+        source_mkt = JsonSourceOperator(
+            source_data=data_mkt,
+            iterator_query="$.team[*]",
+            attribute_mappings={"person_id": "$.id", "person_name": "$.name"}
+        )
+
+        extend_mkt = ExtendOperator(
+            parent_operator=source_mkt,
+            new_attribute="department",
+            expression=Constant(Literal("Marketing"))
+        )
+
+        debug_logger("Pipeline Configuration",
+                     f"Pipeline 1: Source(Engineering) -> Extend(dept='Engineering')\n"
+                     f"Pipeline 2: Source(Marketing) -> Extend(dept='Marketing')\n"
+                     f"Union of both extended pipelines")
+
+        # Union the extended pipelines
+        union_op = UnionOperator(operators=[extend_eng, extend_mkt])
+        result = union_op.execute()
+
+        debug_logger("Execution Result",
+                     f"Number of tuples: {len(result)}\n"
+                     f"Tuples:\n" + "\n".join(f"  {i + 1}. {t['person_name']} - {t['department']}"
+                                              for i, t in enumerate(result)))
+
+        assert len(result) == 4
+
+        # Verify departments
+        eng_count = sum(1 for t in result if t["department"].lexical_form == "Engineering")
+        mkt_count = sum(1 for t in result if t["department"].lexical_form == "Marketing")
+        assert eng_count == 2
+        assert mkt_count == 2
+
+        debug_logger("Validation",
+                     "✓ Union of extended pipelines successful\n"
+                     "✓ Department attributes correctly assigned\n"
+                     "✓ All 4 tuples present")
+
+    def test_extend_after_union(self, debug_logger):
+        """
+        Test Extend operator applied after Union operator.
+
+        Validates that Union output can be extended with computed attributes.
+        """
+        debug_logger("Test: Extend After Union",
+                     "Objective: Apply extensions to merged union results")
+
+        data_a = {
+            "team": [
+                {"id": 1, "name": "Alice"}
+            ]
+        }
+
+        data_b = {
+            "team": [
+                {"id": 2, "name": "Bob"}
+            ]
+        }
+
+        source_a = JsonSourceOperator(
+            source_data=data_a,
+            iterator_query="$.team[*]",
+            attribute_mappings={"person_id": "$.id", "person_name": "$.name"}
+        )
+
+        source_b = JsonSourceOperator(
+            source_data=data_b,
+            iterator_query="$.team[*]",
+            attribute_mappings={"person_id": "$.id", "person_name": "$.name"}
+        )
+
+        # Union first
+        union_op = UnionOperator(operators=[source_a, source_b])
+
+        # Then extend the union result
+        extend_op = ExtendOperator(
+            parent_operator=union_op,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[
+                    Reference("person_id"),
+                    Constant("http://example.org/person/")
+                ]
+            )
+        )
+
+        debug_logger("Pipeline Configuration",
+                     f"Stage 1: Union(Source A, Source B)\n"
+                     f"Stage 2: Extend union result with 'subject' IRI")
+
+        result = extend_op.execute()
+
+        debug_logger("Execution Result",
+                     f"Number of tuples: {len(result)}\n"
+                     f"Tuples:\n" + "\n".join(f"  {i + 1}. {t['person_name']} - {t['subject']}"
+                                              for i, t in enumerate(result)))
+
+        assert len(result) == 2
+
+        # Verify all tuples have the computed subject
+        for tuple in result:
+            assert "subject" in tuple
+            assert isinstance(tuple["subject"], IRI)
+            assert tuple["subject"].value.startswith("http://example.org/person/")
+
+        debug_logger("Validation",
+                     "✓ Extend after Union successful\n"
+                     "✓ All merged tuples have computed attribute\n"
+                     "✓ IRI subjects correctly generated")
+
+    def test_union_of_complex_pipelines(self, debug_logger):
+        """
+        Test Union of multiple complex pipelines with multiple extensions.
+
+        Validates that Union can merge results from sophisticated
+        multi-stage pipelines.
+        """
+        debug_logger("Test: Union of Complex Pipelines",
+                     "Objective: Merge results from multi-stage pipelines")
+
+        data = {
+            "people": [
+                {"id": 1, "first": "Alice", "last": "Anderson"},
+                {"id": 2, "first": "Bob", "last": "Brown"}
+            ]
+        }
+
+        # Pipeline 1: Full processing for Alice
+        source_1 = JsonSourceOperator(
+            source_data={"people": [data["people"][0]]},
+            iterator_query="$.people[*]",
+            attribute_mappings={
+                "id": "$.id",
+                "first": "$.first",
+                "last": "$.last"
+            }
+        )
+
+        extend_1a = ExtendOperator(
+            parent_operator=source_1,
+            new_attribute="full_name",
+            expression=FunctionCall(
+                function=concat,
+                arguments=[Reference("first"), Constant(" "), Reference("last")]
+            )
+        )
+
+        extend_1b = ExtendOperator(
+            parent_operator=extend_1a,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("id"), Constant("http://example.org/person/")]
+            )
+        )
+
+        # Pipeline 2: Full processing for Bob
+        source_2 = JsonSourceOperator(
+            source_data={"people": [data["people"][1]]},
+            iterator_query="$.people[*]",
+            attribute_mappings={
+                "id": "$.id",
+                "first": "$.first",
+                "last": "$.last"
+            }
+        )
+
+        extend_2a = ExtendOperator(
+            parent_operator=source_2,
+            new_attribute="full_name",
+            expression=FunctionCall(
+                function=concat,
+                arguments=[Reference("first"), Constant(" "), Reference("last")]
+            )
+        )
+
+        extend_2b = ExtendOperator(
+            parent_operator=extend_2a,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("id"), Constant("http://example.org/person/")]
+            )
+        )
+
+        debug_logger("Pipeline Configuration",
+                     f"Pipeline 1: Source -> Extend(full_name) -> Extend(subject)\n"
+                     f"Pipeline 2: Source -> Extend(full_name) -> Extend(subject)\n"
+                     f"Union of both complex pipelines")
+
+        # Union the complex pipelines
+        union_op = UnionOperator(operators=[extend_1b, extend_2b])
+        result = union_op.execute()
+
+        debug_logger("Execution Result",
+                     f"Number of tuples: {len(result)}\n"
+                     f"Sample tuple: {result[0] if result else 'None'}")
+
+        assert len(result) == 2
+
+        # Verify both tuples have all computed attributes
+        for tuple in result:
+            assert "full_name" in tuple
+            assert "subject" in tuple
+            assert isinstance(tuple["subject"], IRI)
+
+        assert result[0]["full_name"].lexical_form == "Alice Anderson"
+        assert result[1]["full_name"].lexical_form == "Bob Brown"
+
+        debug_logger("Validation",
+                     "✓ Union of complex pipelines successful\n"
+                     "✓ All computed attributes preserved\n"
+                     "✓ Full names: Alice Anderson, Bob Brown")
+
+    def test_nested_union_composition(self, debug_logger):
+        """
+        Test nested Union operators (Union of Unions).
+
+        Validates that Union operators can be nested to create
+        hierarchical merging structures.
+        """
+        debug_logger("Test: Nested Union Composition",
+                     "Objective: Union of Union operators")
+
+        data_a = {"team": [{"id": 1, "name": "Alice"}]}
+        data_b = {"team": [{"id": 2, "name": "Bob"}]}
+        data_c = {"team": [{"id": 3, "name": "Charlie"}]}
+        data_d = {"team": [{"id": 4, "name": "Diana"}]}
+
+        # Create four source operators
+        sources = []
+        for data in [data_a, data_b, data_c, data_d]:
+            source = JsonSourceOperator(
+                source_data=data,
+                iterator_query="$.team[*]",
+                attribute_mappings={"person_id": "$.id", "person_name": "$.name"}
+            )
+            sources.append(source)
+
+        # Create nested unions: Union(Union(A, B), Union(C, D))
+        union_ab = UnionOperator(operators=[sources[0], sources[1]])
+        union_cd = UnionOperator(operators=[sources[2], sources[3]])
+        union_all = UnionOperator(operators=[union_ab, union_cd])
+
+        debug_logger("Pipeline Configuration",
+                     f"Nested structure:\n"
+                     f"  Union_AB = Union(Source A, Source B)\n"
+                     f"  Union_CD = Union(Source C, Source D)\n"
+                     f"  Union_All = Union(Union_AB, Union_CD)")
+
+        result = union_all.execute()
+
+        debug_logger("Execution Result",
+                     f"Number of tuples: {len(result)}\n"
+                     f"Names: {[t['person_name'] for t in result]}")
+
+        assert len(result) == 4
+        names = [t["person_name"] for t in result]
+        assert "Alice" in names
+        assert "Bob" in names
+        assert "Charlie" in names
+        assert "Diana" in names
+
+        debug_logger("Validation",
+                     "✓ Nested unions successful\n"
+                     "✓ All 4 tuples from nested structure present")

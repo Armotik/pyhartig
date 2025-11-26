@@ -1,0 +1,106 @@
+@prefix rr: <http://www.w3.org/ns/r2rml#> .
+@prefix rml: <http://semweb.mmlab.be/ns/rml#> .
+@prefix ql: <http://semweb.mmlab.be/ns/ql#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/> .
+
+# ============================================================================
+# MAPPING GITHUB
+# Source: data/github_issues.json
+# ============================================================================
+<#GitHubIssueMapping> a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "data/github_issues.json";  # Chemin relatif à la racine du projet
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$[*]"                    # La racine est une liste d'issues
+  ];
+
+  # Sujet: http://github.com/issue/{number} (On utilise le numéro public de l'issue)
+  rr:subjectMap [
+    rr:template "http://github.com/issue/{number}";
+    rr:class schema:Issue
+  ];
+
+  # Titre
+  rr:predicateObjectMap [
+    rr:predicate schema:name;
+    rr:objectMap [ rml:reference "title" ]
+  ];
+
+  # Description (Body sur GitHub)
+  rr:predicateObjectMap [
+    rr:predicate schema:description;
+    rr:objectMap [ rml:reference "body" ]
+  ];
+
+  # Créateur (User Login)
+  rr:predicateObjectMap [
+    rr:predicate schema:creator;
+    rr:objectMap [ rml:reference "user.login" ]
+  ];
+
+  # Date de création
+  rr:predicateObjectMap [
+    rr:predicate schema:dateCreated;
+    rr:objectMap [
+      rml:reference "created_at";
+      rr:datatype xsd:dateTime
+    ]
+  ];
+
+  # Source (Constante pour distinguer l'origine)
+  rr:predicateObjectMap [
+    rr:predicate ex:source;
+    rr:objectMap [ rr:constant "GitHub" ]
+  ].
+
+# ============================================================================
+# MAPPING GITLAB
+# Source: data/gitlab_issues.json
+# ============================================================================
+<#GitLabIssueMapping> a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "data/gitlab_issues.json";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$[*]"
+  ];
+
+  # Sujet: http://gitlab.com/issue/{iid} (On utilise l'ID interne du projet)
+  rr:subjectMap [
+    rr:template "http://gitlab.com/issue/{iid}";
+    rr:class schema:Issue
+  ];
+
+  # Titre
+  rr:predicateObjectMap [
+    rr:predicate schema:name;
+    rr:objectMap [ rml:reference "title" ]
+  ];
+
+  # Description (Description sur GitLab aussi)
+  rr:predicateObjectMap [
+    rr:predicate schema:description;
+    rr:objectMap [ rml:reference "description" ]
+  ];
+
+  # Créateur (Author Username)
+  rr:predicateObjectMap [
+    rr:predicate schema:creator;
+    rr:objectMap [ rml:reference "author.username" ]
+  ];
+
+  # Date de création
+  rr:predicateObjectMap [
+    rr:predicate schema:dateCreated;
+    rr:objectMap [
+      rml:reference "created_at";
+      rr:datatype xsd:dateTime
+    ]
+  ];
+
+  # Source
+  rr:predicateObjectMap [
+    rr:predicate ex:source;
+    rr:objectMap [ rr:constant "GitLab" ]
+  ].

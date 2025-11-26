@@ -1,2 +1,3 @@
+rdflib
 pytest
 jsonpath-ng~=1.7.0

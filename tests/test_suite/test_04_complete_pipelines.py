@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from pyhartig.operators.sources.JsonSourceOperator import JsonSourceOperator
 from pyhartig.operators.ExtendOperator import ExtendOperator
+from pyhartig.operators.UnionOperator import UnionOperator
 from pyhartig.expressions.Constant import Constant
 from pyhartig.expressions.Reference import Reference
 from pyhartig.expressions.FunctionCall import FunctionCall
@@ -503,3 +504,438 @@ class TestCompletePipelines:
                      f"✓ Generated {len(result)} tuples (incomplete entry filtered)\n"
                      f"✓ Entry IDs: {entry_ids}")
 
+    def test_multi_source_union_pipeline(self, debug_logger):
+        """
+        Test complete pipeline with Union merging multiple data sources.
+
+        Demonstrates realistic scenario of combining data from multiple
+        sources into a unified result set.
+        """
+        debug_logger("Test: Multi-Source Union Pipeline",
+                     "Objective: Merge and process data from multiple sources")
+
+        # Data from different departments
+        engineering_data = {
+            "employees": [
+                {"id": "E001", "name": "Alice", "role": "Engineer", "department": "Engineering"},
+                {"id": "E002", "name": "Bob", "role": "Senior Engineer", "department": "Engineering"}
+            ]
+        }
+
+        marketing_data = {
+            "employees": [
+                {"id": "M001", "name": "Charlie", "role": "Marketing Manager", "department": "Marketing"},
+                {"id": "M002", "name": "Diana", "role": "Content Creator", "department": "Marketing"}
+            ]
+        }
+
+        sales_data = {
+            "employees": [
+                {"id": "S001", "name": "Eve", "role": "Sales Rep", "department": "Sales"}
+            ]
+        }
+
+        debug_logger("Input Data",
+                     f"Engineering: 2 employees\n"
+                     f"Marketing: 2 employees\n"
+                     f"Sales: 1 employee\n"
+                     f"Total expected: 5 employees")
+
+        # Pipeline 1: Engineering
+        source_eng = JsonSourceOperator(
+            source_data=engineering_data,
+            iterator_query="$.employees[*]",
+            attribute_mappings={
+                "emp_id": "$.id",
+                "emp_name": "$.name",
+                "emp_role": "$.role",
+                "dept": "$.department"
+            }
+        )
+
+        extend_eng = ExtendOperator(
+            parent_operator=source_eng,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("emp_id"), Constant("http://company.org/employee/")]
+            )
+        )
+
+        # Pipeline 2: Marketing
+        source_mkt = JsonSourceOperator(
+            source_data=marketing_data,
+            iterator_query="$.employees[*]",
+            attribute_mappings={
+                "emp_id": "$.id",
+                "emp_name": "$.name",
+                "emp_role": "$.role",
+                "dept": "$.department"
+            }
+        )
+
+        extend_mkt = ExtendOperator(
+            parent_operator=source_mkt,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("emp_id"), Constant("http://company.org/employee/")]
+            )
+        )
+
+        # Pipeline 3: Sales
+        source_sales = JsonSourceOperator(
+            source_data=sales_data,
+            iterator_query="$.employees[*]",
+            attribute_mappings={
+                "emp_id": "$.id",
+                "emp_name": "$.name",
+                "emp_role": "$.role",
+                "dept": "$.department"
+            }
+        )
+
+        extend_sales = ExtendOperator(
+            parent_operator=source_sales,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("emp_id"), Constant("http://company.org/employee/")]
+            )
+        )
+
+        debug_logger("Pipeline Configuration",
+                     f"Three independent pipelines:\n"
+                     f"  1. Engineering: Source -> Extend(subject)\n"
+                     f"  2. Marketing: Source -> Extend(subject)\n"
+                     f"  3. Sales: Source -> Extend(subject)\n"
+                     f"Union all three pipelines")
+
+        # Union all pipelines
+        union_op = UnionOperator(operators=[extend_eng, extend_mkt, extend_sales])
+
+        # Add common RDF type to all employees after union
+        final_pipeline = ExtendOperator(
+            parent_operator=union_op,
+            new_attribute="rdf_type",
+            expression=Constant(IRI("http://xmlns.com/foaf/0.1/Person"))
+        )
+
+        result = final_pipeline.execute()
+
+        debug_logger("Execution Result",
+                     f"Number of employees: {len(result)}\n"
+                     f"Employees:\n" + "\n".join(
+                         f"  {i + 1}. {t['emp_name']} ({t['dept']}) - {t['subject']}"
+                         for i, t in enumerate(result)))
+
+        assert len(result) == 5
+
+        # Verify all have required attributes
+        for emp in result:
+            assert "subject" in emp
+            assert "rdf_type" in emp
+            assert isinstance(emp["subject"], IRI)
+            assert isinstance(emp["rdf_type"], IRI)
+
+        # Count by department
+        dept_counts = {}
+        for emp in result:
+            dept = emp["dept"]
+            dept_counts[dept] = dept_counts.get(dept, 0) + 1
+
+        assert dept_counts["Engineering"] == 2
+        assert dept_counts["Marketing"] == 2
+        assert dept_counts["Sales"] == 1
+
+        debug_logger("Validation",
+                     f"✓ Multi-source union pipeline successful\n"
+                     f"✓ All 5 employees present\n"
+                     f"✓ Department distribution: {dept_counts}\n"
+                     f"✓ All employees have subject IRI and RDF type")
+
+    def test_union_with_post_processing_pipeline(self, debug_logger):
+        """
+        Test Union followed by complex post-processing.
+
+        Demonstrates merging data from different sources and then
+        applying uniform transformations to the merged result.
+        """
+        debug_logger("Test: Union with Post-Processing",
+                     "Objective: Merge data and apply uniform transformations")
+
+        # Two different data sources with different schemas
+        authors_data = {
+            "authors": [
+                {"id": "A1", "firstName": "Alice", "lastName": "Smith"},
+                {"id": "A2", "firstName": "Bob", "lastName": "Jones"}
+            ]
+        }
+
+        contributors_data = {
+            "contributors": [
+                {"id": "C1", "firstName": "Charlie", "lastName": "Brown"},
+                {"id": "C2", "firstName": "Diana", "lastName": "Prince"}
+            ]
+        }
+
+        debug_logger("Input Data",
+                     f"Authors: 2 persons\n"
+                     f"Contributors: 2 persons\n"
+                     f"Goal: Merge and create unified person representation")
+
+        # Pipeline 1: Authors
+        source_authors = JsonSourceOperator(
+            source_data=authors_data,
+            iterator_query="$.authors[*]",
+            attribute_mappings={
+                "person_id": "$.id",
+                "first": "$.firstName",
+                "last": "$.lastName"
+            }
+        )
+
+        extend_authors_role = ExtendOperator(
+            parent_operator=source_authors,
+            new_attribute="role",
+            expression=Constant(Literal("Author"))
+        )
+
+        # Pipeline 2: Contributors
+        source_contributors = JsonSourceOperator(
+            source_data=contributors_data,
+            iterator_query="$.contributors[*]",
+            attribute_mappings={
+                "person_id": "$.id",
+                "first": "$.firstName",
+                "last": "$.lastName"
+            }
+        )
+
+        extend_contributors_role = ExtendOperator(
+            parent_operator=source_contributors,
+            new_attribute="role",
+            expression=Constant(Literal("Contributor"))
+        )
+
+        # Union both pipelines
+        union_op = UnionOperator(operators=[extend_authors_role, extend_contributors_role])
+
+        # Post-processing: Generate URI
+        post_process_uri = ExtendOperator(
+            parent_operator=union_op,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("person_id"), Constant("http://example.org/person/")]
+            )
+        )
+
+        # Post-processing: Generate full name
+        post_process_name = ExtendOperator(
+            parent_operator=post_process_uri,
+            new_attribute="full_name",
+            expression=FunctionCall(
+                function=concat,
+                arguments=[Reference("first"), Constant(" "), Reference("last")]
+            )
+        )
+
+        # Post-processing: Generate label
+        post_process_label = ExtendOperator(
+            parent_operator=post_process_name,
+            new_attribute="label",
+            expression=FunctionCall(
+                function=concat,
+                arguments=[
+                    Reference("full_name"),
+                    Constant(" ("),
+                    Reference("role"),
+                    Constant(")")
+                ]
+            )
+        )
+
+        debug_logger("Pipeline Configuration",
+                     f"Stage 1: Process Authors (add role='Author')\n"
+                     f"Stage 2: Process Contributors (add role='Contributor')\n"
+                     f"Stage 3: Union both pipelines\n"
+                     f"Stage 4-6: Post-process union result:\n"
+                     f"  - Generate subject URI\n"
+                     f"  - Generate full_name\n"
+                     f"  - Generate label with role")
+
+        result = post_process_label.execute()
+
+        debug_logger("Execution Result",
+                     f"Number of persons: {len(result)}\n"
+                     f"Persons:\n" + "\n".join(
+                         f"  {i + 1}. {t['label'].lexical_form}"
+                         for i, t in enumerate(result)))
+
+        assert len(result) == 4
+
+        # Verify all have computed attributes
+        for person in result:
+            assert "subject" in person
+            assert "full_name" in person
+            assert "label" in person
+            assert "role" in person
+            assert isinstance(person["subject"], IRI)
+
+        # Check roles
+        authors = [p for p in result if p["role"].lexical_form == "Author"]
+        contributors = [p for p in result if p["role"].lexical_form == "Contributor"]
+        assert len(authors) == 2
+        assert len(contributors) == 2
+
+        # Check label format
+        alice = [p for p in result if p["first"] == "Alice"][0]
+        assert alice["label"].lexical_form == "Alice Smith (Author)"
+
+        debug_logger("Validation",
+                     f"✓ Union with post-processing successful\n"
+                     f"✓ All 4 persons merged and processed\n"
+                     f"✓ Authors: {len(authors)}, Contributors: {len(contributors)}\n"
+                     f"✓ Sample label: {alice['label'].lexical_form}")
+
+    def test_complex_rdf_generation_with_union(self, debug_logger):
+        """
+        Test complete RDF generation pipeline with Union for multiple entity types.
+
+        Demonstrates realistic scenario of generating RDF triples for
+        different entity types and merging them into a unified graph.
+        """
+        debug_logger("Test: Complex RDF Generation with Union",
+                     "Objective: Generate RDF triples for multiple entity types")
+
+        data = {
+            "people": [
+                {"id": "P1", "name": "Alice", "email": "alice@example.org"},
+                {"id": "P2", "name": "Bob", "email": "bob@example.org"}
+            ],
+            "projects": [
+                {"id": "PR1", "title": "Project Alpha", "leader": "P1"},
+                {"id": "PR2", "title": "Project Beta", "leader": "P2"}
+            ]
+        }
+
+        debug_logger("Input Data",
+                     f"People: 2 persons\n"
+                     f"Projects: 2 projects\n"
+                     f"Goal: Generate RDF triples for both entity types")
+
+        # Pipeline 1: People
+        source_people = JsonSourceOperator(
+            source_data=data,
+            iterator_query="$.people[*]",
+            attribute_mappings={
+                "id": "$.id",
+                "name": "$.name",
+                "email": "$.email"
+            }
+        )
+
+        # Person URI
+        people_uri = ExtendOperator(
+            parent_operator=source_people,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("id"), Constant("http://example.org/person/")]
+            )
+        )
+
+        # Person type
+        people_type = ExtendOperator(
+            parent_operator=people_uri,
+            new_attribute="predicate",
+            expression=Constant(IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"))
+        )
+
+        people_type_obj = ExtendOperator(
+            parent_operator=people_type,
+            new_attribute="object",
+            expression=Constant(IRI("http://xmlns.com/foaf/0.1/Person"))
+        )
+
+        # Pipeline 2: Projects
+        source_projects = JsonSourceOperator(
+            source_data=data,
+            iterator_query="$.projects[*]",
+            attribute_mappings={
+                "id": "$.id",
+                "title": "$.title",
+                "leader": "$.leader"
+            }
+        )
+
+        # Project URI
+        projects_uri = ExtendOperator(
+            parent_operator=source_projects,
+            new_attribute="subject",
+            expression=FunctionCall(
+                function=to_iri,
+                arguments=[Reference("id"), Constant("http://example.org/project/")]
+            )
+        )
+
+        # Project type
+        projects_type = ExtendOperator(
+            parent_operator=projects_uri,
+            new_attribute="predicate",
+            expression=Constant(IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"))
+        )
+
+        projects_type_obj = ExtendOperator(
+            parent_operator=projects_type,
+            new_attribute="object",
+            expression=Constant(IRI("http://example.org/ontology/Project"))
+        )
+
+        debug_logger("Pipeline Configuration",
+                     f"Pipeline 1: People -> Generate (subject, predicate, object) for type\n"
+                     f"Pipeline 2: Projects -> Generate (subject, predicate, object) for type\n"
+                     f"Union both to create unified triple set")
+
+        # Union both pipelines to create combined triple set
+        union_triples = UnionOperator(operators=[people_type_obj, projects_type_obj])
+
+        result = union_triples.execute()
+
+        debug_logger("Execution Result",
+                     f"Number of triples: {len(result)}\n"
+                     f"Triples:\n" + "\n".join(
+                         f"  {i + 1}. <{t['subject']}> <{t['predicate']}> <{t['object']}>"
+                         for i, t in enumerate(result)))
+
+        assert len(result) == 4  # 2 people + 2 projects
+
+        # Verify all triples have required structure
+        for triple in result:
+            assert "subject" in triple
+            assert "predicate" in triple
+            assert "object" in triple
+            assert isinstance(triple["subject"], IRI)
+            assert isinstance(triple["predicate"], IRI)
+            assert isinstance(triple["object"], IRI)
+
+        # Count by object type
+        person_triples = [t for t in result if "Person" in t["object"].value]
+        project_triples = [t for t in result if "Project" in t["object"].value]
+        assert len(person_triples) == 2
+        assert len(project_triples) == 2
+
+        # Verify specific triples
+        alice_triple = [t for t in result if "P1" in t["subject"].value][0]
+        assert alice_triple["object"].value == "http://xmlns.com/foaf/0.1/Person"
+
+        alpha_triple = [t for t in result if "PR1" in t["subject"].value][0]
+        assert alpha_triple["object"].value == "http://example.org/ontology/Project"
+
+        debug_logger("Validation",
+                     f"✓ RDF generation with union successful\n"
+                     f"✓ Total triples: {len(result)}\n"
+                     f"✓ Person triples: {len(person_triples)}\n"
+                     f"✓ Project triples: {len(project_triples)}\n"
+                     f"✓ All triples have proper RDF structure")

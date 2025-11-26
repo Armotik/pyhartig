@@ -1,11 +1,10 @@
-from abc import ABC
 from typing import Any, List
 from jsonpath_ng import parse
 
 from pyhartig.operators.SourceOperator import SourceOperator
 
 
-class JsonSourceOperator(SourceOperator, ABC):
+class JsonSourceOperator(SourceOperator):
 
     def _apply_iterator(self, data: Any, query: str) -> List[Any]:
         """
