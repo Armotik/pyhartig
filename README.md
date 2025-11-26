@@ -44,6 +44,8 @@ Current implementation status covers the foundations required to reproduce **Sou
 * **Built-in Functions**:
     * Implementation of Annex B functions: `toIRI`, `toLiteral`, `concat`.
     * Strict error propagation handling (Epsilon).
+* **RML Mapping Support**:
+    * Includes an RML Parser (`MappingParser`) that translates declarative RML mapping files (Turtle .ttl) into an executable algebraic pipeline
 
 ## 3. Theoretical Foundation
 
@@ -61,6 +63,7 @@ The project is organized to strictly follow the definitions provided in the rese
 
 ```text
 src/pyhartig/
+├── data/               # Sample data files for testing
 ├── algebra/            # Core algebraic definitions
 │   ├── Terms.py        # RDF Terms (IRI, Literal, BlankNode)
 │   └── Tuple.py        # MappingTuple and Epsilon
@@ -71,6 +74,8 @@ src/pyhartig/
 │   └── FunctionCall.py # Extension function applications
 ├── functions/          # Extension functions
 │   └── builtins.py     # Implementation of toIRI, concat, etc.
+├── mapping/            # RML Mapping Parser
+│   └── MappingParser.py # Parses RML files into operator pipelines
 └── operators/          # Algebraic Operators
     ├── Operator.py     # Abstract base class for all operators
     ├── ExtendOperator.py # Extend operator implementation
@@ -79,6 +84,8 @@ src/pyhartig/
     └── sources/        # Source operator implementations
         └── JsonSourceOperator.py # JSON data source operator
 tests/                  # Unit tests for all components
+├── use_cases/        # Example usage scripts
+│   └── github_gitlab/ # Example with GitHub and GitLab data
 └── test_suite
     ├── conftest.py      # Pytest configuration
     ├── run_all_tests.py # Script to run all tests
@@ -120,149 +127,58 @@ For development, it is highly recommended to install the library in "editable" m
    ```
    
 ## 6. Usage Example
-### 6.1. Using the JsonSourceOperator
+### 6.1. The "Data-Driven" Way (Using RML)
+
+This is the recommended way. You define your mapping in RML (Turtle) and let the engine execute it.
+
+```python
+from pyhartig.mapping.MappingParser import MappingParser
+
+# 1. Load your RML mapping file
+parser = MappingParser("tests/use_cases/github_gitlab/data/fusion_mapping.ttl")
+
+# 2. Compile it into an algebraic pipeline
+pipeline = parser.parse()
+
+# 3. Execute to get the RDF graph (as tuples)
+results = pipeline.execute()
+
+for row in results:
+    print(f"{row['subject']} {row['predicate']} {row['object']}")
+```
+
+### 6.2. The "Algebraic" Way (Manual Python Code)
+
+You can manually construct the operator pipeline for debugging or specific logic.
 
 ```python
 from pyhartig.operators.sources.JsonSourceOperator import JsonSourceOperator
+from pyhartig.operators.ExtendOperator import ExtendOperator
+from pyhartig.operators.UnionOperator import UnionOperator
+from pyhartig.expressions.FunctionCall import FunctionCall
+from pyhartig.expressions.Reference import Reference
+from pyhartig.expressions.Constant import Constant
+from pyhartig.functions.builtins import to_iri, concat
 
-data = {
-    "team": [
-        {"id": 1, "name": "Alice", "roles": ["Dev", "Admin"]},
-        {"id": 2, "name": "Bob",   "roles": ["User"]}
-    ]
-}
+# 1. Define Source
+source_op = JsonSourceOperator(
+    source_data={"users": [{"id": 1, "name": "Alice"}]},
+    iterator_query="$.users[*]",
+    attribute_mappings={"uid": "id", "name": "name"}
+)
 
-# 1. Define Iterator (q)
-iterator = "$.team[*]"
+# 2. Define Transformation (Extend)
+# Create IRI: http://ex.org/user/{uid}
+iri_expr = FunctionCall(
+    to_iri,
+    [FunctionCall(concat, [Constant("http://ex.org/user/"), Reference("uid")])]
+)
 
-# 2. Define Mappings (P)
-mappings = {
-    "user_id": "id",
-    "user_role": "roles"
-}
+extend_op = ExtendOperator(source_op, "subject", iri_expr)
 
 # 3. Execute
-op = JsonSourceOperator(data, iterator, mappings)
-results = op.execute()
-
-# 4. Output (MappingTuples)
-# Alice generates 2 tuples due to Cartesian Product (Dev + Admin)
-for row in results:
-    print(row)
-```
-
-### 6.2 Using Expressions
-
-```python
-from pyhartig.expressions.FunctionCall import FunctionCall
-from pyhartig.expressions.Constant import Constant
-from pyhartig.expressions.Reference import Reference
-from pyhartig.functions.builtins import concat, to_iri
-from pyhartig.algebra.Tuple import MappingTuple
-
-# Goal: Create an IRI [http://example.org/user/1](http://example.org/user/1) from ID "1"
-
-# Expression: toIRI(concat("[http://example.org/user/](http://example.org/user/)", Reference("id")))
-expr = FunctionCall(
-    to_iri,
-    [
-        FunctionCall(
-            concat,
-            [Constant("[http://example.org/user/](http://example.org/user/)"), Reference("id")]
-        )
-    ]
-)
-
-row = MappingTuple({"id": "1"})
-result = expr.evaluate(row)
-print(result) # Output: [http://example.org/user/1](http://example.org/user/1)
-```
-
-### 6.3 Transforming Data (Extend Operator)
-
-```python
-from pyhartig.operators.ExtendOperator import ExtendOperator
-from pyhartig.expressions.FunctionCall import FunctionCall
-from pyhartig.expressions.Constant import Constant
-from pyhartig.expressions.Reference import Reference
-from pyhartig.functions.builtins import concat, to_iri
-
-# Assume 'source_op' is the operator from Example 6.1
-
-# Define the Expression: toIRI(concat("http://example.org/user/", Reference("user_id")))
-expr = FunctionCall(
-    to_iri,
-    [
-        FunctionCall(
-            concat,
-            [Constant("http://example.org/user/"), Reference("user_id")]
-        )
-    ]
-)
-
-# Apply Extend Operator
-extend_op = ExtendOperator(
-    parent_operator=source_op,
-    new_attribute="subject",
-    expression=expr
-)
-
 results = extend_op.execute()
-
-for row in results:
-    print(f"User: {row['user_name']} -> URI: {row['subject']}")
-```
-
-### 6.4 Merging Multiple Data Sources (Union Operator)
-
-```python
-from pyhartig.operators.UnionOperator import UnionOperator
-from pyhartig.operators.sources.JsonSourceOperator import JsonSourceOperator
-
-# Data from different departments
-engineering_data = {
-    "employees": [
-        {"id": "E001", "name": "Alice", "dept": "Engineering"},
-        {"id": "E002", "name": "Bob", "dept": "Engineering"}
-    ]
-}
-
-marketing_data = {
-    "employees": [
-        {"id": "M001", "name": "Charlie", "dept": "Marketing"},
-        {"id": "M002", "name": "Diana", "dept": "Marketing"}
-    ]
-}
-
-# Create source operators for each department
-source_eng = JsonSourceOperator(
-    source_data=engineering_data,
-    iterator_query="$.employees[*]",
-    attribute_mappings={
-        "emp_id": "$.id",
-        "emp_name": "$.name",
-        "department": "$.dept"
-    }
-)
-
-source_mkt = JsonSourceOperator(
-    source_data=marketing_data,
-    iterator_query="$.employees[*]",
-    attribute_mappings={
-        "emp_id": "$.id",
-        "emp_name": "$.name",
-        "department": "$.dept"
-    }
-)
-
-# Union the two sources
-union_op = UnionOperator(operators=[source_eng, source_mkt])
-results = union_op.execute()
-
-# Output: 4 employees (2 from Engineering + 2 from Marketing)
-for row in results:
-    print(f"{row['emp_name']} - {row['department']}")
-```
+``` 
 
 ## 7. Testing
 
