@@ -25,7 +25,7 @@ def run_tests_with_output():
     Execute test suite with verbose output and capture results.
     
     Returns:
-        tuple: (return_code, output)
+        int: process return code
     """
     print_section("PyHartig Test Suite Execution", "=")
     
@@ -63,6 +63,7 @@ def generate_test_summary():
     """Generate a summary of the test suite structure."""
     print_section("Test Suite Structure", "-")
     
+    # Liste des fichiers de test avec (filename, title, description)
     test_files = [
         ("test_01_source_operators.py", "Source Operator Tests", 
          "Validates JSON source operators with iteration and extraction"),
@@ -80,6 +81,8 @@ def generate_test_summary():
          "Tests for external library integration (jsonpath-ng, etc.)"),
         ("test_08_real_data_integration.py", "Real Data Integration Tests",
          "Tests using actual project data files"),
+        ("test_09_union_operator.py", "Union Operator Tests",
+         "Validates union operator behavior"),
     ]
     
     for i, (filename, title, description) in enumerate(test_files, 1):
@@ -114,9 +117,10 @@ def main():
     
     print(f"\nTimestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    return return_code
+    # Retourner explicitement un int pour garantir un type compatible avec sys.exit()
+    return int(return_code)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
-
+    # Assurer que l'argument passé à sys.exit est un int pour éviter les warnings de type.
+    sys.exit(int(main()))

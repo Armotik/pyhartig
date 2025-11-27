@@ -316,7 +316,7 @@ Tests composition of multiple built-in functions.
 # IRI: <http://example.org/person/John Doe>
 ```
 
-**Result:** ✓ Functions successfully composed with proper type conversions and error propagation.
+**Result:** Functions successfully composed with proper type conversions and error propagation.
 
 #### 7.1.6. Expression System Tests
 
@@ -381,7 +381,7 @@ Tests the entire system using the actual project data file (`data/test_data.json
 # )
 ```
 
-**Result:** ✓ Pipeline executed successfully on real data with correct Cartesian product handling.
+**Result:** Pipeline executed successfully on real data with correct Cartesian product handling.
 
 #### 7.1.9. Union Operator Tests
 
@@ -402,7 +402,7 @@ Tests merging data from different sources and applying uniform transformations t
 # label="Charlie Brown (Contributor)"
 ```
 
-**Result:** ✓ Multi-source union with post-processing successful. All 4 persons merged and uniformly transformed with roles preserved.
+**Result:** Multi-source union with post-processing successful. All 4 persons merged and uniformly transformed with roles preserved.
 
 **Additional Union Test Coverage:**
 - Union of two and three sources
