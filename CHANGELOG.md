@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.14] - 2025-12-09
+### Changed
+- **Project structure in `README.md`**.
+
 ## [0.1.13] - 2025-12-09
 
 ### Fixed

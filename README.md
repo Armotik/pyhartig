@@ -120,6 +120,7 @@ tests/                  # Unit tests for all components
     └── TEST_SUITE_README.md  # Comprehensive test suite documentation
 LICENSE                 # MIT License
 README.md               # Project documentation
+CHANGELOG.md            # Project changelog
 pyproject.toml          # Project configuration and dependencies
 requirements.txt        # Additional dependencies
 ```
