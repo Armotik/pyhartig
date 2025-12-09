@@ -57,6 +57,25 @@ This implementation is formally grounded in the algebraic foundation defined by 
 
 **Reference :** [Hartig, O., & Min Oo, S. (2025). An Algebraic Foundation for Knowledge Graph Construction.](https://arxiv.org/abs/2503.10385).
 
+### 3.1. RML/R2RML Conformance
+
+This implementation follows the **RML** (RDF Mapping Language) and **R2RML** (RDB to RDF Mapping Language) specifications:
+
+- **Default Term Types** (as per R2RML specification):
+  - Subject Maps: `rr:IRI` (default)
+  - Predicate Maps: `rr:IRI` (default)
+  - Object Maps: `rr:Literal` (default)
+  
+- **Supported Term Map Components**:
+  - `rr:constant` - Fixed values
+  - `rr:reference` - JSONPath references
+  - `rr:template` - String templates with placeholders
+  - `rr:termType` - Explicit term type override
+
+**References:**
+- [R2RML Specification](https://www.w3.org/TR/r2rml/)
+- [RML Specification](https://rml.io/specs/rml/)
+
 ## 4. Project Structure
 
 The project is organized to strictly follow the definitions provided in the research paper:

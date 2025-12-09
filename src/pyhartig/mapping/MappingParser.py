@@ -85,7 +85,7 @@ class MappingParser:
 
             # Line 7: phi_sbj := CREATEEXTEXPR(SM)
             if sm:
-                phi_sbj = self._create_ext_expr(sm)
+                phi_sbj = self._create_ext_expr(sm, default_term_type="IRI")
                 # Line 8: E := Extend(E_src, "subject", phi_sbj)
                 E_base = ExtendOperator(E_src, "subject", phi_sbj)
             else:
@@ -103,10 +103,10 @@ class MappingParser:
                 om = self.graph.value(pom, RR.objectMap)
 
                 # Line 24: phi_pred := CREATEEXTEXPR(PM)
-                phi_pred = self._create_ext_expr(pm)
+                phi_pred = self._create_ext_expr(pm, default_term_type="IRI")
 
                 # Line 25: phi_obj := CREATEEXTEXPR(OM)
-                phi_obj = self._create_ext_expr(om)
+                phi_obj = self._create_ext_expr(om, default_term_type="Litteral")
 
                 # Line 26: E := Extend(E, "predicate", phi_pred)
                 E = ExtendOperator(E, "predicate", phi_pred)
@@ -304,10 +304,11 @@ class MappingParser:
 
         return P
 
-    def _create_ext_expr(self, term_map: Node) -> Expression:
+    def _create_ext_expr(self, term_map: Node, default_term_type: str = "Litteral") -> Expression:
         """
         Creates an extension expression from a term map.
         :param term_map: The term map node.
+        :param default_term_type: The default term type if none is specified.
         :return: An Expression representing the term map.
         """
         # Line 1: Constant
@@ -321,6 +322,10 @@ class MappingParser:
         ref = self.graph.value(term_map, RML.reference)
         if ref:
             term_type = self.graph.value(term_map, RR.termType)
+
+            if term_type is None:
+                term_type = URIRef(f"http://www.w3.org/ns/r2rml#{default_term_type}")
+
             ref_expr = Reference(str(ref))
 
             if term_type == RR.IRI:
@@ -349,6 +354,10 @@ class MappingParser:
             concat_expr = FunctionCall(concat, args)
 
             term_type = self.graph.value(term_map, RR.termType)
+
+            if term_type is None:
+                term_type = URIRef(f"http://www.w3.org/ns/r2rml#{default_term_type}")
+
             if term_type == RR.IRI:
                 return FunctionCall(to_iri, [concat_expr])
             return FunctionCall(to_literal, [concat_expr, Constant("http://www.w3.org/2001/XMLSchema#string")])
