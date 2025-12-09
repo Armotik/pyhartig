@@ -83,6 +83,9 @@ def generate_test_summary():
          "Tests using actual project data files"),
         ("test_09_union_operator.py", "Union Operator Tests",
          "Validates union operator behavior"),
+        ("test_10_explain.py", "Explain Functionality Tests", "Validates explain operator output"),
+        ("test_11_explain_json.py", "JSON Explain Functionality Tests",
+         "Validates JSON explain operator output"),
     ]
     
     for i, (filename, title, description) in enumerate(test_files, 1):

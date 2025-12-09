@@ -63,6 +63,12 @@ class TestGithubGitlabUseCase:
             pipeline = parser.parse()
             results = pipeline.execute()
 
+            graph = parser.explain()
+            debug_logger("Pipeline Explanation", graph)
+
+            parser.save_explanation("pipeline_explanation.json", format="json")
+            parser.save_explanation("pipeline_explanation.txt", format="text")
+
         finally:
             os.chdir(original_cwd)
 

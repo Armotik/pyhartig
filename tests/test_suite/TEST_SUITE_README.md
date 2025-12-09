@@ -2,7 +2,7 @@
 
 ## Overview
 
-This test suite provides comprehensive validation of the PyHartig. The tests are organized into nine categories, each focusing on specific aspects of the system's functionality.
+This test suite provides comprehensive validation of the PyHartig. The tests are organized into eleven categories, each focusing on specific aspects of the system's functionality.
 
 ## Test Organization
 
@@ -179,6 +179,130 @@ This test suite provides comprehensive validation of the PyHartig. The tests are
 - Union with post-processing (in `test_04_complete_pipelines.py`)
 - Complex RDF generation with Union (in `test_04_complete_pipelines.py`)
 
+### 10. Explain Tests (`test_10_explain.py`)
+
+**Objective**: Validate human-readable pipeline visualization with the `explain()` method.
+
+**Test Coverage**:
+- Simple source operator explanation
+- Extend operator with expression visualization
+- Union operator with multiple children
+- Nested operator hierarchies
+- Complex expression trees display
+
+**Key Features**:
+- Tests the `explain()` method for all operator types
+- Validates tree-like structure generation
+- Ensures proper indentation and formatting
+- Displays expression details (Constants, References, FunctionCalls)
+
+**Example Output**:
+```text
+Union(
+  operators: 48
+  ├─ [0]:
+    Extend(
+      attribute: object
+      expression: Const(<http://schema.org/Issue>)
+      parent:
+        └─ Extend(
+          attribute: predicate
+          expression: Const(<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>)
+          parent:
+            └─ Extend(
+              attribute: subject
+              expression: to_iri(concat(Const('http://gitlab.com/issue/'), Ref(iid)))
+              parent:
+                └─ Source(
+                  iterator: $[*]
+                  mappings: ['iid']
+                )
+            )
+        )
+    )
+  ...
+)
+```
+
+### 11. Explain JSON Tests (`test_11_explain_json.py`)
+
+**Objective**: Validate JSON-based pipeline representation with the `explain_json()` method.
+
+**Test Coverage**:
+- Source operator with all parameters
+- Extend with Constant expressions
+- Extend with Reference expressions
+- Extend with FunctionCall expressions (to_iri, to_literal, concat)
+- Extend with IRI constant values
+- Nested Extend operators
+- Union operator with children array
+- Union with extended sources
+- Complex nested pipeline structures
+- Valid JSON serialization verification
+
+**Key Features**:
+- Tests the `explain_json()` method for all operator types
+- Validates complete serializable pipeline representation
+- Ensures proper JSON structure with type information
+- Provides programmatic access to pipeline structure
+
+**Example Output**:
+```json
+{
+  "type": "Union",
+  "parameters": {
+    "operator_count": 36
+  },
+  "children": [
+    {
+      "type": "Extend",
+      "parameters": {
+        "new_attribute": "object",
+        "expression": {
+          "type": "FunctionCall",
+          "function": "to_literal",
+          "arguments": [
+            {
+              "type": "Reference",
+              "attribute": "created_at"
+            },
+            {
+              "type": "Constant",
+              "value_type": "str",
+              "value": "http://www.w3.org/2001/XMLSchema#string"
+            }
+          ]
+        }
+      },
+      "parent": {
+        "type": "Extend",
+        "parameters": {
+          "new_attribute": "predicate",
+          "expression": {
+            "type": "Constant",
+            "value_type": "IRI",
+            "value": "http://schema.org/dateCreated"
+          }
+        },
+        "parent": {
+          "type": "Source",
+          "operator_class": "JsonSourceOperator",
+          "parameters": {
+            "iterator": "$[*]",
+            "attribute_mappings": {
+              "number": "number",
+              "created_at": "created_at"
+            },
+            "source_type": "JSON",
+            "jsonpath_iterator": "$[*]"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
 ## Running the Tests
 
 ### Run All Tests
@@ -209,6 +333,12 @@ pytest tests/test_suite/test_02_extend_operators.py -v -s
 # Union operators only
 pytest tests/test_suite/test_09_union_operator.py -v -s
 
+# Explain tests
+pytest tests/test_suite/test_10_explain.py -v -s
+
+# Explain JSON tests
+pytest tests/test_suite/test_11_explain_json.py -v -s
+
 # Complete pipelines
 pytest tests/test_suite/test_04_complete_pipelines.py -v -s
 
@@ -217,6 +347,9 @@ pytest tests/test_suite/test_08_real_data_integration.py -v -s
 
 # All Union-related tests (across all files)
 pytest tests/test_suite/ -k union -v -s
+
+# All explain-related tests
+pytest tests/test_suite/ -k explain -v -s
 ```
 
 ### Run with Markers
@@ -283,10 +416,10 @@ The test suite uses the following data files:
 
 ## Test Statistics
 
-- **Total Test Files**: 9
-- **Total Tests**: 95
-- **Test Categories**: Source, Extend, Union, Composition, Pipelines, Functions, Expressions, Libraries, Integration
-- **Coverage Areas**: Operators, Expressions, Functions, Libraries, Real Data, Multi-Source Merging
+- **Total Test Files**: 11
+- **Total Tests**: 108
+- **Test Categories**: Source, Extend, Union, Composition, Pipelines, Functions, Expressions, Libraries, Integration, Explain, Explain JSON
+- **Coverage Areas**: Operators, Expressions, Functions, Libraries, Real Data, Multi-Source Merging, Pipeline Visualization
 - **Debug Traces**: Comprehensive output for all tests
 
 ## Requirements
@@ -334,6 +467,6 @@ This test suite is part of the PyHartig project and follows the same license.
 
 ---
 
-**Last Updated**: 2025-11-26
-**Test Suite Version**: 2.0.0
+**Last Updated**: 2025-12-09
+**Test Suite Version**: 2.1.0
 

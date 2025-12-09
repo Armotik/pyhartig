@@ -363,3 +363,40 @@ class MappingParser:
             return FunctionCall(to_literal, [concat_expr, Constant("http://www.w3.org/2001/XMLSchema#string")])
 
         return Constant(AlgebraIRI("http://error"))
+
+    def explain(self) -> str:
+        """
+        Generates a human-readable explanation of the entire mapping pipeline.
+        :return: String representation of the operator tree.
+        """
+        pipeline = self.parse()
+        return pipeline.explain()
+
+    def explain_json(self) -> Dict[str, Any]:
+        """
+        Parse the mapping and return JSON explanation of the resulting pipeline.
+
+        :return: Dictionary with pipeline structure
+        """
+        pipeline = self.parse()
+        return pipeline.explain_json()
+
+    def save_explanation(self, output_path: str, format: str = "json"):
+        """
+        Save pipeline explanation to file.
+
+        :param output_path: Path to output file
+        :param format: "json" or "text"
+        """
+        import json
+
+        pipeline = self.parse()
+
+        if format == "json":
+            explanation = pipeline.explain_json()
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(explanation, f, indent=2, ensure_ascii=False)
+        else:
+            explanation = pipeline.explain()
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(explanation)

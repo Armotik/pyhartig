@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Any, TYPE_CHECKING
+from typing import List, Any, TYPE_CHECKING, Dict
 from pyhartig.algebra.Tuple import MappingTuple
 
 if TYPE_CHECKING:
@@ -16,6 +16,26 @@ class Operator(ABC):
         """
         Execute the operator and return a list of MappingTuple results.
         :return: List of MappingTuple
+        """
+        pass
+
+    @abstractmethod
+    def explain(self, indent: int = 0, prefix: str = "") -> str:
+        """
+        Generate a human-readable explanation of the operator tree.
+
+        :param indent: Current indentation level
+        :param prefix: Prefix for tree structure (e.g., "├─", "└─")
+        :return: String representation of the operator tree
+        """
+        pass
+
+    @abstractmethod
+    def explain_json(self) -> Dict[str, Any]:
+        """
+        Generate a JSON-serializable explanation of the operator tree.
+
+        :return: Dictionary representing the operator tree structure
         """
         pass
 
@@ -37,3 +57,4 @@ class Operator(ABC):
             new_attribute=var_name,
             expression=expression
         )
+

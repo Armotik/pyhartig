@@ -43,6 +43,33 @@ class SourceOperator(Operator):
         """
         pass
 
+    def explain(self, indent: int = 0, prefix: str = "") -> str:
+        """
+        Generate a human-readable explanation of the Source operator
+        :param indent: Current indentation level
+        :param prefix: Prefix for tree structure (e.g., "├─", "└─")
+        :return: String representation of the Source operator
+        """
+        indent_str = "  " * indent
+        lines = [f"{indent_str}{prefix}Source(", f"{indent_str}  iterator: {self.iterator_query}",
+                 f"{indent_str}  mappings: {list(self.attribute_mappings.keys())}", f"{indent_str})"]
+
+        return "\n".join(lines)
+
+    def explain_json(self) -> Dict[str, Any]:
+        """
+        Generate a JSON-serializable explanation of the Source operator
+        :return: Dictionary representing the Source operator
+        """
+        return {
+            "type": "Source",
+            "operator_class": self.__class__.__name__,
+            "parameters": {
+                "iterator": self.iterator_query,
+                "attribute_mappings": self.attribute_mappings
+            }
+        }
+
     def execute(self) -> List[MappingTuple]:
         """
         Execute the Source operator logic

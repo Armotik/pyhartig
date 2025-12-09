@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Dict
 from jsonpath_ng import parse
 
 from pyhartig.operators.SourceOperator import SourceOperator
@@ -40,3 +40,13 @@ class JsonSourceOperator(SourceOperator):
             else:
                 results.append(match.value)
         return results
+
+    def explain_json(self) -> Dict[str, Any]:
+        """
+        Generate a JSON-serializable explanation of the JsonSource operator
+        :return: Dictionary representing the operator tree structure
+        """
+        base = super().explain_json()
+        base["parameters"]["source_type"] = "JSON"
+        base["parameters"]["jsonpath_iterator"] = self.iterator_query
+        return base

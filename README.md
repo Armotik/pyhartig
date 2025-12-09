@@ -46,6 +46,10 @@ Current implementation status covers the foundations required to reproduce **Sou
     * Strict error propagation handling (Epsilon).
 * **RML Mapping Support**:
     * Includes an RML Parser (`MappingParser`) that translates declarative RML mapping files (Turtle .ttl) into an executable algebraic pipeline
+* **Pipeline Visualization**:
+    * `explain()` method for human-readable pipeline trees
+    * `explain_json()` method for programmatic access to pipeline structure
+    * Detailed expression and operator visualization
 
 ## 3. Theoretical Foundation
 
@@ -71,6 +75,30 @@ This implementation follows the **RML** (RDF Mapping Language) and **R2RML** (RD
   - `rr:reference` - JSONPath references
   - `rr:template` - String templates with placeholders
   - `rr:termType` - Explicit term type override
+
+#### Example
+
+```turtle
+@prefix rr: <http://www.w3.org/ns/r2rml#> .
+@prefix ex: <http://example.org/> .
+
+ a rr:TriplesMap;
+  rr:subjectMap [
+    rr:template "http://example.org/person/{id}";
+    # termType defaults to rr:IRI for subject maps
+  ];
+  
+  rr:predicateObjectMap [
+    rr:predicateMap [
+      rr:constant ex:name;
+      # termType defaults to rr:IRI for predicate maps
+    ];
+    rr:objectMap [
+      rr:reference "$.name";
+      # termType defaults to rr:Literal for object maps
+    ]
+  ].
+```
 
 **References:**
 - [R2RML Specification](https://www.w3.org/TR/r2rml/)
@@ -117,6 +145,8 @@ tests/                  # Unit tests for all components
     ├── test_07_library_integration.py  # Tests for external library integration
     ├── test_08_real_data_integration.py  # Tests with real project data
     ├── test_09_union_operator.py  # Tests for UnionOperator
+    ├── test_10_explain.py          # Tests for explain() method
+    ├── test_11_explain_json.py     # Tests for explain_json() method
     └── TEST_SUITE_README.md  # Comprehensive test suite documentation
 LICENSE                 # MIT License
 README.md               # Project documentation
@@ -200,6 +230,122 @@ extend_op = ExtendOperator(source_op, "subject", iri_expr)
 results = extend_op.execute()
 ``` 
 
+### 6.3. Pipeline Visualization
+
+#### 6.3.1. Human-Readable Format
+
+Get a visual representation of your pipeline structure:
+
+```python
+from pyhartig.operators.sources.JsonSourceOperator import JsonSourceOperator
+from pyhartig.operators.ExtendOperator import ExtendOperator
+from pyhartig.expressions.FunctionCall import FunctionCall
+from pyhartig.expressions.Reference import Reference
+from pyhartig.expressions.Constant import Constant
+from pyhartig.functions.builtins import to_iri
+
+# Build a pipeline
+data = {"team": [{"id": 1, "name": "Alice"}]}
+source = JsonSourceOperator(
+    source_data=data,
+    iterator_query="$.team[*]",
+    attribute_mappings={"person_id": "$.id", "person_name": "$.name"}
+)
+
+uri_expr = FunctionCall(to_iri, [Reference("person_id"), Constant("http://example.org/")])
+extend = ExtendOperator(source, "subject", uri_expr)
+
+# Explain the pipeline
+print(extend.explain())
+```
+
+**Output:**
+```
+Extend(
+  attribute: subject
+  expression: to_iri(Ref(person_id), Const('http://example.org/'))
+  parent:
+    └─ Source(
+         type: JsonSourceOperator
+         iterator: $.team[*]
+         mappings: ['person_id', 'person_name']
+       )
+)
+```
+
+#### 6.3.2. JSON Format (Programmatic Access)
+
+Get a machine-readable JSON representation:
+
+```python
+import json
+
+# Get JSON explanation
+explanation = extend.explain_json()
+print(json.dumps(explanation, indent=2))
+```
+
+**Output:**
+```json
+{
+  "type": "Extend",
+  "parameters": {
+    "new_attribute": "subject",
+    "expression": {
+      "type": "FunctionCall",
+      "function": "to_iri",
+      "arguments": [
+        {
+          "type": "Reference",
+          "attribute": "person_id"
+        },
+        {
+          "type": "Constant",
+          "value_type": "str",
+          "value": "http://example.org/"
+        }
+      ]
+    }
+  },
+  "parent": {
+    "type": "Source",
+    "operator_class": "JsonSourceOperator",
+    "parameters": {
+      "iterator": "$.team[*]",
+      "attribute_mappings": {
+        "person_id": "$.id",
+        "person_name": "$.name"
+      },
+      "source_type": "JSON",
+      "jsonpath_iterator": "$.team[*]"
+    }
+  }
+}
+```
+
+#### 6.3.3. Explaining RML Mappings
+
+Visualize the pipeline generated from RML mappings:
+
+```python
+from pyhartig.mapping.MappingParser import MappingParser
+
+parser = MappingParser("mapping.ttl")
+
+# Text format
+print(parser.explain())
+
+# JSON format
+import json
+print(json.dumps(parser.explain_json(), indent=2))
+
+# Save to file
+parser.save_explanation("pipeline.json", format="json")
+parser.save_explanation("pipeline.txt", format="text")
+```
+
+
+
 ## 7. Testing
 
 This project uses `pytest` for unit testing. To run the tests, ensure you have installed the test dependencies and execute:
@@ -215,10 +361,11 @@ Tests cover:
 - Recursive expression evaluation.
 - Operator chaining (`Source` -> `Extend` -> `Union`).
 - Multi-source data merging and integration.
+- Pipeline explanation (text and JSON formats).
 
 ### 7.1. Comprehensive Test Suite
 
-The project includes a comprehensive test suite with **95 tests** organized into **9 categories**, all of which pass successfully. Below are representative examples from each category with their results.
+The project includes a comprehensive test suite with **108 tests** organized into **11 categories**, all of which pass successfully. Below are representative examples from each category with their results.
 
 #### 7.1.1. Source Operator Tests
 
@@ -422,6 +569,8 @@ Tests merging data from different sources and applying uniform transformations t
 # label="Charlie Brown (Contributor)"
 ```
 
+
+
 **Result:** Multi-source union with post-processing successful. All 4 persons merged and uniformly transformed with roles preserved.
 
 **Additional Union Test Coverage:**
@@ -434,10 +583,209 @@ Tests merging data from different sources and applying uniform transformations t
 - Union preserving tuple order (bag semantics)
 - Union with different attribute schemas
 
+#### 7.1.10. Explain Tests
+
+**Example: Pipeline Visualization with explain()**
+
+Tests the human-readable pipeline visualization for debugging and documentation purposes.
+
+**Real-world example from GitHub/GitLab integration use case:**
+
+```text
+Union(
+  operators: 48
+  ├─ [0]:
+    Extend(
+      attribute: object
+      expression: Const(<http://schema.org/Issue>)
+      parent:
+        └─ Extend(
+          attribute: predicate
+          expression: Const(<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>)
+          parent:
+            └─ Extend(
+              attribute: subject
+              expression: to_iri(concat(Const('http://gitlab.com/issue/'), Ref(iid)))
+              parent:
+                └─ Source(
+                  iterator: $[*]
+                  mappings: ['iid']
+                )
+            )
+        )
+    )
+  ├─ [1]:
+    Extend(
+      attribute: object
+      expression: Const("GitHub")
+      parent:
+        └─ Extend(
+          attribute: predicate
+          expression: Const(<http://example.org/source>)
+          parent:
+            └─ Extend(
+              attribute: subject
+              expression: to_iri(concat(Const('http://github.com/issue/'), Ref(number)))
+              parent:
+                └─ Source(
+                  iterator: $[*]
+                  mappings: ['number']
+                )
+            )
+        )
+    )
+  ├─ [2]:
+    Extend(
+      attribute: object
+      expression: to_literal(Ref(body), Const('http://www.w3.org/2001/XMLSchema#string'))
+      parent:
+        └─ Extend(
+          attribute: predicate
+          expression: Const(<http://schema.org/description>)
+          parent:
+            └─ Extend(
+              attribute: subject
+              expression: to_iri(concat(Const('http://github.com/issue/'), Ref(number)))
+              parent:
+                └─ Source(
+                  iterator: $[*]
+                  mappings: ['number', 'body']
+                )
+            )
+        )
+    )
+  ...
+)
+```
+
+**Result:** Pipeline visualization successfully generates readable tree-like structures showing:
+- Operator hierarchy with proper indentation
+- Expression details (Constants, References, FunctionCalls)
+- Source mappings and iterators
+- Union structure with numbered children
+
+**Additional Explain Test Coverage:**
+- Simple source operator explanation
+- Extend operator with expression visualization
+- Union operator with multiple children (up to 48 operators)
+- Nested operator hierarchies
+- Complex expression trees with nested function calls
+
+#### 7.1.11. Explain JSON Tests
+
+**Example: Programmatic Pipeline Analysis with explain_json()**
+
+Tests the JSON-based pipeline representation for programmatic access to pipeline structure.
+
+**Real-world example from GitHub/GitLab integration use case:**
+
+```json
+{
+  "type": "Union",
+  "parameters": {
+    "operator_count": 36
+  },
+  "children": [
+    {
+      "type": "Extend",
+      "parameters": {
+        "new_attribute": "object",
+        "expression": {
+          "type": "FunctionCall",
+          "function": "to_literal",
+          "arguments": [
+            {
+              "type": "Reference",
+              "attribute": "created_at"
+            },
+            {
+              "type": "Constant",
+              "value_type": "str",
+              "value": "http://www.w3.org/2001/XMLSchema#string"
+            }
+          ]
+        }
+      },
+      "parent": {
+        "type": "Extend",
+        "parameters": {
+          "new_attribute": "predicate",
+          "expression": {
+            "type": "Constant",
+            "value_type": "IRI",
+            "value": "http://schema.org/dateCreated"
+          }
+        },
+        "parent": {
+          "type": "Extend",
+          "parameters": {
+            "new_attribute": "subject",
+            "expression": {
+              "type": "FunctionCall",
+              "function": "to_iri",
+              "arguments": [
+                {
+                  "type": "FunctionCall",
+                  "function": "concat",
+                  "arguments": [
+                    {
+                      "type": "Constant",
+                      "value_type": "str",
+                      "value": "http://github.com/issue/"
+                    },
+                    {
+                      "type": "Reference",
+                      "attribute": "number"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "parent": {
+            "type": "Source",
+            "operator_class": "JsonSourceOperator",
+            "parameters": {
+              "iterator": "$[*]",
+              "attribute_mappings": {
+                "number": "number",
+                "created_at": "created_at"
+              },
+              "source_type": "JSON",
+              "jsonpath_iterator": "$[*]"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+**Result:** JSON explanation provides complete serializable pipeline representation including:
+- Full operator type hierarchy
+- Expression trees with function calls and arguments
+- Source operator metadata (iterator, mappings, source type)
+- Nested parent-child relationships
+- Valid JSON for programmatic processing
+
+**Additional Explain JSON Test Coverage:**
+- Source operator with all parameters
+- Extend with Constant expressions
+- Extend with Reference expressions
+- Extend with FunctionCall expressions (to_iri, to_literal, concat)
+- Extend with IRI constant values
+- Nested Extend operators
+- Union operator with children array
+- Union with extended sources
+- Complex nested pipeline structures (up to 36+ operators)
+- Valid JSON serialization verification
+
+
 ### 7.2. Test Suite Summary
 
 **Execution Results:**
-- **Total Tests:** 95
+- **Total Tests:** 108
 - **Passed:** 95 (100%)
 - **Failed:** 0
 - **Execution Time:** ~2.00s
@@ -452,6 +800,8 @@ Tests merging data from different sources and applying uniform transformations t
 - Expression system (Constant, Reference, FunctionCall)
 - External library integration (jsonpath-ng, JSON)
 - Real data transformation scenarios
+- Pipeline visualization with explain()
+- JSON pipeline representation with explain_json()
 
 ## 8. Authors
 
