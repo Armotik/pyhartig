@@ -246,6 +246,58 @@ Union(
 - Ensures proper JSON structure with type information
 - Provides programmatic access to pipeline structure
 
+### 12. Project Operator Tests (`test_12_project_operator.py`)
+
+**Objective**: Validate the Project operator for restricting mapping relations to specified attributes.
+
+Based on Definition 11: `Project^P(r) : (A, I) -> (P, I')` where:
+- `r = (A, I)`: Source mapping relation with attributes A and instance I
+- `P ⊆ A`: Non-empty subset of attributes to retain
+- Result: New mapping relation `(P, I')` where `I' = { t[P] | t ∈ I }`
+
+**Test Coverage**:
+- Single attribute projection
+- Multiple attribute projection
+- Identity projection (P = A)
+- Value preservation verification (`t[P](a) = t(a)`)
+- **Strict mode validation**: Missing attribute raises `KeyError`
+- Multiple missing attributes error reporting
+- Empty source handling
+- Operator composition (Project + Extend, Project + Union)
+- Chained projections
+- Explain functionality (`explain()` and `explain_json()`)
+- IRI value preservation
+- Duplicate tuple handling (bag semantics)
+- Tuple order preservation
+
+**Key Features**:
+- Tests the `ProjectOperator` core functionality
+- Validates strict mode behavior (P ⊆ A enforced)
+- Tests integration with other operators (Source, Extend, Union)
+- Validates edge cases and error handling
+- Integration tests for RDF generation and heterogeneous schema handling
+
+**Strict Mode Rationale**:
+- Safer behavior: detects bugs early when projecting non-existent attributes
+- Conforms to classical relational algebra where `P ⊆ A` is required
+- Heterogeneous schemas can be handled with `Union` + multiple `Project` operations
+
+**Example - Handling Heterogeneous Schemas**:
+```python
+# Source A has: id, name, dept
+source_a = JsonSourceOperator(data_a, "$.items[*]", {"id": "$.id", "name": "$.name", "dept": "$.dept"})
+
+# Source B has: id, name, role (different schema)
+source_b = JsonSourceOperator(data_b, "$.items[*]", {"id": "$.id", "name": "$.name", "role": "$.role"})
+
+# Project each to common schema before union
+project_a = ProjectOperator(source_a, {"id", "name"})
+project_b = ProjectOperator(source_b, {"id", "name"})
+
+# Union now works with homogeneous schemas
+union = UnionOperator([project_a, project_b])
+```
+
 **Example Output**:
 ```json
 {
@@ -338,6 +390,9 @@ pytest tests/test_suite/test_10_explain.py -v -s
 
 # Explain JSON tests
 pytest tests/test_suite/test_11_explain_json.py -v -s
+
+# Project operators only
+pytest tests/test_suite/test_12_project_operator.py -v -s
 
 # Complete pipelines
 pytest tests/test_suite/test_04_complete_pipelines.py -v -s

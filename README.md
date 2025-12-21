@@ -24,7 +24,7 @@ into RDF Knowledge Graphs via algebraic operators.
 `pyhartig` provides a set of composable Python objects representing the core algebraic operators for querying
 heterogeneous data sources.
 
-Current implementation status covers the foundations required to reproduce **Source**, **Extend**, and **Union** operators as defined in the paper:
+Current implementation status covers the foundations required to reproduce **Source**, **Extend**, **Union**, and **Project** operators as defined in the paper:
 
 * **Algebraic Structures**: Strict typing for `MappingTuple`, `IRI`, `Literal`, `BlankNode`, and the special error value `EPSILON` ($\epsilon$).
 * **Source Operator**:
@@ -38,6 +38,11 @@ Current implementation status covers the foundations required to reproduce **Sou
     * Implementation of the algebraic union logic for merging multiple data sources.
     * Preserves tuple order and supports bag semantics (duplicates preserved).
     * Enables multi-source data integration scenarios.
+* **Project Operator**:
+    * Implementation of the algebraic projection logic ($Project^{P}(r)$).
+    * Restricts mapping relations to specified subset of attributes.
+    * Strict mode: raises exception if projected attribute not found (enforces $P \subseteq A$).
+    * Useful for schema normalization before Union operations.
 * **Expression System ($\varphi$)**:
     * Composite pattern implementation for recursive expressions.
     * Supports `Constant`, `Reference` (attributes), and `FunctionCall`.
@@ -126,6 +131,7 @@ src/pyhartig/
 └── operators/          # Algebraic Operators
     ├── Operator.py     # Abstract base class for all operators
     ├── ExtendOperator.py # Extend operator implementation
+    ├── ProjectOperator.py # Project operator implementation
     ├── UnionOperator.py  # Union operator implementation
     ├── SourceOperator.py # Abstract Source operator
     └── sources/        # Source operator implementations
@@ -147,6 +153,7 @@ tests/                  # Unit tests for all components
     ├── test_09_union_operator.py  # Tests for UnionOperator
     ├── test_10_explain.py          # Tests for explain() method
     ├── test_11_explain_json.py     # Tests for explain_json() method
+    ├── test_12_project_operator.py # Tests for ProjectOperator
     └── TEST_SUITE_README.md  # Comprehensive test suite documentation
 LICENSE                 # MIT License
 README.md               # Project documentation
@@ -365,7 +372,7 @@ Tests cover:
 
 ### 7.1. Comprehensive Test Suite
 
-The project includes a comprehensive test suite with **108 tests** organized into **11 categories**, all of which pass successfully. Below are representative examples from each category with their results.
+The project includes a comprehensive test suite with **128 tests** organized into **12 categories**, all of which pass successfully. Below are representative examples from each category with their results.
 
 #### 7.1.1. Source Operator Tests
 
@@ -781,19 +788,96 @@ Tests the JSON-based pipeline representation for programmatic access to pipeline
 - Complex nested pipeline structures (up to 36+ operators)
 - Valid JSON serialization verification
 
+#### 7.1.12. Project Operator Tests
+
+**Example: Projection to Subset of Attributes**
+
+Tests restricting a mapping relation to a specified subset of attributes based on Definition 11.
+
+```python
+# Project^P(r) : (A, I) -> (P, I')
+# Input relation r with attributes: {person_id, person_name, dept, salary}
+# Projection P = {person_id, person_name}
+
+# Input tuples:
+# Tuple(person_id=1, person_name='Alice', dept='Engineering', salary=75000)
+# Tuple(person_id=2, person_name='Bob', dept='Marketing', salary=65000)
+
+# Result tuples (only projected attributes):
+# Tuple(person_id=1, person_name='Alice')
+# Tuple(person_id=2, person_name='Bob')
+```
+
+**Result:** Projection successfully restricts tuples to specified attributes P.
+
+**Example: Strict Mode - Missing Attribute Error**
+
+Tests that projecting a non-existent attribute raises a KeyError (strict mode enforces P ⊆ A).
+
+```python
+# Attempt to project non-existent attribute
+project = ProjectOperator(source, {"person_name", "nonexistent_attr"})
+project.execute()
+
+# Raises KeyError:
+# "ProjectOperator: Attribute(s) {'nonexistent_attr'} not found in tuple.
+#  Available attributes: {'person_id', 'person_name', 'dept', 'salary'}.
+#  Projection requires P ⊆ A (all projected attributes must exist in the tuple)."
+```
+
+**Result:** Strict mode correctly detects missing attributes and raises informative exception.
+
+**Example: Heterogeneous Schema Handling with Union + Project**
+
+Tests the recommended approach for handling different schemas: project each source to common attributes before union.
+
+```python
+# Source A has: {id, name, dept}
+# Source B has: {id, name, role}  (different schema)
+
+# Project each to common schema
+project_a = ProjectOperator(source_a, {"id", "name"})
+project_b = ProjectOperator(source_b, {"id", "name"})
+
+# Union now works with homogeneous schemas
+union = UnionOperator([project_a, project_b])
+
+# Result: All tuples have only {id, name} attributes
+```
+
+**Result:** Heterogeneous schemas successfully normalized using Project before Union.
+
+**Additional Project Operator Test Coverage:**
+- Single attribute projection
+- Multiple attribute projection
+- Identity projection (P = A)
+- Value preservation verification (t\[P](a) = t(a))
+- Strict mode validation (KeyError for P ⊄ A)
+- Multiple missing attributes error reporting
+- Empty source handling (Project^P(∅) = ∅)
+- Operator composition (Project + Extend, Project + Union)
+- Chained projections (Project(Project(r)))
+- Explain functionality (text and JSON)
+- IRI value preservation in projection
+- Duplicate tuple handling (bag semantics)
+- Tuple order preservation
+- RDF triple generation with Project
+- Integration tests for schema normalization
+
 
 ### 7.2. Test Suite Summary
 
 **Execution Results:**
-- **Total Tests:** 108
-- **Passed:** 95 (100%)
+- **Total Tests:** 128
+- **Passed:** 128 (100%)
 - **Failed:** 0
-- **Execution Time:** ~2.00s
+- **Execution Time:** ~2.50s
 
 **Coverage:**
 - Source operators with JSONPath integration
 - Extend operators with expression evaluation
 - Union operators for multi-source data merging
+- Project operators for attribute restriction (strict mode)
 - Operator composition and chaining
 - Complete end-to-end pipelines
 - Built-in RDF functions (toIRI, toLiteral, concat)
@@ -802,6 +886,7 @@ Tests the JSON-based pipeline representation for programmatic access to pipeline
 - Real data transformation scenarios
 - Pipeline visualization with explain()
 - JSON pipeline representation with explain_json()
+- Heterogeneous schema handling with Project + Union
 
 ## 8. Authors
 

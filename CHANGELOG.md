@@ -5,6 +5,94 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-12-21
+
+### Added
+
+#### Project Operator (Opérateur de Projection)
+- **New Operator**: Added `ProjectOperator` for restricting mapping relations to specified attributes
+  - Based on Definition 11 of relational algebra for mapping relations
+  - Formal notation: `Project^P(r) : (A, I) -> (P, I')`
+  - Input: Mapping relation `r = (A, I)` and non-empty subset `P ⊆ A`
+  - Output: New mapping relation `(P, I')` where `I' = { t[P] | t ∈ I }`
+  - For each tuple `t`, creates `t[P]` with `dom(t[P]) = P` and `t[P](a) = t(a)` for all `a ∈ P`
+
+- **Strict Mode (Default)**:
+  - Raises `KeyError` when projecting attributes not present in tuple
+  - Enforces constraint `P ⊆ A` from classical relational algebra
+  - Safer behavior: detects bugs early
+  - Heterogeneous schemas handled via `Union` + multiple `Project` operations
+
+- **ProjectOperator Features**:
+  - `execute()`: Projects tuples to retain only specified attributes (strict mode)
+  - `explain()`: Human-readable ASCII tree visualization
+  - `explain_json()`: Machine-readable JSON format for API/tools
+
+- **Use Case**: Useful for retaining only attributes needed in subsequent mapping steps
+
+#### EquiJoin Operator (Opérateur d'Équi-jointure)
+- **New Operator**: Implemented `EquiJoinOperator` for combining two mapping relations based on join conditions
+  - Based on Definition 12 of relational algebra for mapping relations
+  - Formal notation: `EqJoin^J(r₁, r₂) : Operator × Operator → Operator`
+  - Input: Two mapping relations `r₁ = (A₁, I₁)` and `r₂ = (A₂, I₂)`
+  - Join Conditions: Set `J ⊆ A₁ × A₂` defining attribute pairs for equality testing
+  - Precondition: `A₁ ∩ A₂ = ∅` (attribute sets must be disjoint)
+  - Output: New mapping relation `(A, I)` where:
+    - `A = A₁ ∪ A₂` (union of all attributes)
+    - `I = { t₁ ∪ t₂ | t₁ ∈ I₁, t₂ ∈ I₂, ∀(a₁, a₂) ∈ J : t₁(a₁) = t₂(a₂) }`
+
+- **Join Condition Semantics**:
+  - Supports multiple join conditions (compound keys)
+  - Tuple pairs are merged only when ALL conditions are satisfied
+  - Correctly handles `None` values in join attributes
+
+- **EquiJoinOperator Features**:
+  - `execute()`: Performs nested loop equi-join with condition checking
+  - `explain()`: Human-readable ASCII tree visualization showing join conditions
+  - `explain_json()`: Machine-readable JSON format for API/tools
+
+- **Validation**:
+  - Raises `ValueError` if attribute sets are not disjoint (A₁ ∩ A₂ ≠ ∅)
+  - Raises `ValueError` if join attribute lists have different lengths
+
+- **Use Case**: Particularly relevant for referencing object maps (referencing object maps) in RML translation, where joins are needed to combine data from multiple sources
+
+### Testing
+
+- Added comprehensive test suite for `ProjectOperator` (`test_12_project_operator.py`)
+  - Basic projection tests (single, multiple, all attributes)
+  - Strict mode validation (missing attribute raises `KeyError`)
+  - Empty result handling
+  - Operator composition (Project + Extend, Project + Union)
+  - Chained projections
+  - Explain functionality tests
+  - Edge cases (IRI values, duplicate tuples, tuple order)
+  - Integration tests (RDF generation, heterogeneous schema handling)
+  - 20 new tests
+
+- Added comprehensive test suite for `EquiJoinOperator` (`test_13_equijoin_operator.py`)
+  - Basic equijoin tests (single condition, multiple conditions)
+  - No-match scenarios (empty result)
+  - Cartesian product-like behavior (many-to-many matches)
+  - Precondition validation (disjoint attributes, equal-length attribute lists)
+  - Empty relation handling (left/right empty)
+  - Operator composition (EquiJoin + Extend, EquiJoin + Project)
+  - Chained equijoins (three-way joins)
+  - Explain functionality tests (text and JSON formats)
+  - RML referencing object map use case simulation
+  - Edge cases (null values, value preservation)
+  - 17 new tests
+
+### TODO
+- Update documentation to include `ProjectOperator` and `EquiJoinOperator`
+- Add examples in README and user guides
+- Confirm tests
+- Add existing tests from :
+  - https://rml.io/test-cases/ 
+  - https://github.com/anuzzolese/pyrml
+  - https://github.com/RMLio/rmlmapper-java
+  - https://github.com/morph-kgc/morph-kgc
+
 ## [0.1.15] - 2025-12-9
 
 ### Added
